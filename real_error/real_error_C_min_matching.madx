@@ -1,0 +1,39 @@
+system,"ln -fns /home/eirik/CERN/lhc2018/2018 lhc";
+
+Option, -echo,-warn,-info;
+call,file="lhc/lhc_as-built.seq";
+call,file="lhc/toolkit/macro.madx";
+!call,file="lhc/PROTON/opticsfile.19";
+call,file="lhc/PROTON/opticsfile.1";
+
+Option, echo,warn,info;
+exec,mk_beam(6500);
+use, sequence=lhcb1;
+
+
+
+%knob_Re_type     :=   %knob_Re_value;
+%knob_Im_type     :=   %knob_Im_value;
+
+!%measured_C_min_commentCMIS.b1 = 0.000748;
+!%measured_C_min_commentCMRS.b1 = -0.0013;
+
+%measured_C_min_commentCMRS.b1 = %measured_C_min_Re_value;
+%measured_C_min_commentCMIS.b1 = %measured_C_min_Im_value;
+
+!adding skew quadrupole error
+SELECT, FLAG=ERROR, CLASS=quadrupole, PATTERN = ".";
+EFCOMP, ORDER=2, dks := {0,%error_strength};
+ESAVE, FILE="errors.out";
+
+MATCH, SEQUENCE=lhcb1;
+VARY, NAME=dQx.b1, STEP=1.0E-5;
+VARY, NAME=dQy.b1, STEP=1.0E-5;
+CONSTRAINT, SEQUENCE=lhcb1, RANGE=#e, MUX=62.315, MUY=60.315;
+LMDIF, CALLS=100, TOLERANCE=0.0000001;
+endmatch;
+
+!select, flag = twiss, pattern = %twiss_pattern;
+twiss, file = "output_files/twiss.C_min";
+stop;
+

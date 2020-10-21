@@ -1,0 +1,50 @@
+system,"ln -fns /home/eirik/CERN/lhc2018/2018 lhc";
+
+Option, -echo,-warn,-info;
+call,file="lhc/lhc_as-built.seq";
+call,file="lhc/toolkit/macro.madx";
+call,file="lhc/PROTON/opticsfile.19";
+!call,file="lhc/PROTON/opticsfile.1";
+
+Option, echo,warn,info;
+exec,mk_beam(6500);
+!use, sequence=lhcb1;
+
+SEQEDIT, SEQUENCE=lhcb1;
+	flatten;
+	cycle, start =IP2;
+ENDEDIT;
+
+use, sequence=lhcb1;
+
+colknob1 = 0.;
+colknob5 = 5;
+
+KQSX3.L1 = (-colknob1*1E-4);
+KQSX3.R1 = 1.0*(colknob1*1E-4);
+
+KQSX3.L5 = (-colknob5*1E-4);
+KQSX3.R5 = 1.0*(colknob5*1E-4);
+
+
+
+MATCH, SEQUENCE=lhcb1;
+VARY, NAME=dQx.b1, STEP=1.0E-5;
+VARY, NAME=dQy.b1, STEP=1.0E-5;
+CONSTRAINT, SEQUENCE=lhcb1, RANGE=#e, MUX=62.315, MUY=60.315;
+LMDIF, CALLS=100, TOLERANCE=0.0000001;
+endmatch;
+
+
+select, flag = twiss,pattern = MQSX.3R1;
+select, flag = twiss,pattern = MQSX.3L1;
+select, flag = twiss,pattern = MQSX.3R5;
+select, flag = twiss,pattern = MQSX.3L5;
+twiss,centre = true file="twiss.test";
+qx=table(summ,q1); qy=table(summ,q2);
+
+C_minus = abs(qx - qy - 2);
+value, C_minus;
+
+
+stop;
