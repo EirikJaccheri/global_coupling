@@ -1,0 +1,65 @@
+
+system,"ln -fns /afs/cern.ch/eng/lhc/optics/runII/2018 lhc";
+
+Option, -echo,-warn,-info;
+call,file="lhc/lhc_as-built.seq";
+call,file="lhc/toolkit/macro.madx";
+call,file="lhc/PROTON/opticsfile.19";
+!call,file="lhc/PROTON/opticsfile.1";
+
+Option, echo,warn,info;
+exec,mk_beam(6500);
+use, sequence=lhcb1;
+
+
+
+CMRS.b1_sq     :=   0.0;
+CMIS.b1_sq     :=   0.0;
+
+
+
+KQSX3.R1 = 0.*1E-4;
+KQSX3.L1 = -0.*1E-4;
+
+KQSX3.R5 = 0.*1E-4;
+KQSX3.L5 = -0.*1E-4; 
+ 
+
+KQS.R1B1   :=  0.0 + (   0.000000000000E+00) * ona2_b1 + ( 0.266278479040E-01) * CMRS.b1 + (-0.899733288016E-02) * CMIS.b1 + ( 0.000000000000E+00) * CMRS.b1_sq + ( 0.000000000000E+00) * CMIS.b1_sq  ;
+ KQS.L2B1   := 0.0 +(   0.000000000000E+00) * ona2_b1 + ( 0.266278479040E-01) * CMRS.b1 + (-0.899733288016E-02) * CMIS.b1 + ( 0.000000000000E+00) * CMRS.b1_sq + ( 0.000000000000E+00) * CMIS.b1_sq  ;
+KQS.A23B1   := 0.0 +(   0.000000000000E+00) * ona2_b1 + ( 0.142516736842E-01) * CMRS.b1 + ( 0.848602983914E-02) * CMIS.b1 + ( 0.302173156154E-01) * CMRS.b1_sq + ( 0.109843179604E-01) * CMIS.b1_sq  ;
+ KQS.R3B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + (-0.171205193764E-01) * CMRS.b1 + (-0.807870546221E-02) * CMIS.b1 + (-0.402300957758E-01) * CMRS.b1_sq + (-0.822964594698E-02) * CMIS.b1_sq  ;
+ KQS.L4B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + (-0.171205193764E-01) * CMRS.b1 + (-0.807870546221E-02) * CMIS.b1 + (-0.402300957758E-01) * CMRS.b1_sq + (-0.822964594698E-02) * CMIS.b1_sq  ;
+KQS.A45B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + ( 0.113812285983E-01) * CMRS.b1 + ( 0.955159460427E-02) * CMIS.b1 + ( 0.000000000000E+00) * CMRS.b1_sq + ( 0.000000000000E+00) * CMIS.b1_sq  ;
+ KQS.R5B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + ( 0.792323136002E-02) * CMRS.b1 + ( 0.100926247998E-01) * CMIS.b1 + ( 0.000000000000E+00) * CMRS.b1_sq + ( 0.000000000000E+00) * CMIS.b1_sq  ;
+ KQS.L6B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + ( 0.792323136002E-02) * CMRS.b1 + ( 0.100926247998E-01) * CMIS.b1 + ( 0.000000000000E+00) * CMRS.b1_sq + ( 0.000000000000E+00) * CMIS.b1_sq  ;
+KQS.A67B1   := 0.0 + (   0.000000000000E+00) * ona2_b1 + (-0.158692136780E-01) * CMRS.b1 + ( 0.106460324212E-01) * CMIS.b1 + (-0.709778694350E-01) * CMRS.b1_sq + ( 0.349381515069E-01) * CMIS.b1_sq  ;
+ KQS.R7B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + (-0.739140462540E-02) * CMRS.b1 + (-0.987710657697E-02) * CMIS.b1 + (-0.549901960504E-02) * CMRS.b1_sq + (-0.185504800255E-01) * CMIS.b1_sq  ;
+ KQS.L8B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + (-0.739140462540E-02) * CMRS.b1 + (-0.987710657697E-02) * CMIS.b1 + (-0.549901960504E-02) * CMRS.b1_sq + (-0.185504800255E-01) * CMIS.b1_sq  ;
+KQS.A81B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + ( 0.241324775639E-01) * CMRS.b1 + (-0.962582146500E-02) * CMIS.b1 + ( 0.000000000000E+00) * CMRS.b1_sq + ( 0.000000000000E+00) * CMIS.b1_sq  ;
+
+!adding quadrupole error
+select, flag = error, class = quadrupole, pattern = R3;
+efcomp, order = 2, dkn = {0,0.};
+
+select, flag = error, clear = true;
+
+!adding skew quadrupole error
+SELECT, FLAG=ERROR, CLASS=quadrupole, PATTERN = .;
+SELECT, FLAG=ERROR, CLASS=quadrupole, PATTERN = .;
+EFCOMP, ORDER=2, dks := {0,0.};
+ESAVE, FILE="errors.out";
+
+
+
+MATCH, SEQUENCE=lhcb1;
+VARY, NAME=dQx.b1, STEP=1.0E-5;
+VARY, NAME=dQy.b1, STEP=1.0E-5;
+CONSTRAINT, SEQUENCE=lhcb1, RANGE=#e, MUX=62.31, MUY=60.32;
+LMDIF, CALLS=100, TOLERANCE=0.0000001;
+endmatch;
+
+
+select, flag = twiss, pattern =BPM;
+twiss, file="twiss.original";
+stop;

@@ -1,0 +1,149 @@
+!fine tuning of coupling   (S.Fartoukh)
+
+system,"ln -fns /afs/cern.ch/eng/lhc/optics/runII/2018 lhc";
+
+Option, -echo,-warn,-info;
+call,file="lhc/lhc_as-built.seq";
+call,file="lhc/toolkit/macro.madx";
+call,file="lhc/PROTON/opticsfile.19";
+!call,file="lhc/PROTON/opticsfile.1";
+
+Option, echo,warn,info;
+exec,mk_beam(6500);
+use, sequence=lhcb1;
+
+
+!CMRS.b1_sq      :=   0.0;
+!CMIS.b1_sq      :=   0.0;
+
+
+
+KQSX3.R1 = 0.*1E-4;
+KQSX3.L1 = -0.*1E-4;
+
+KQSX3.R5 = 0.*1E-4;
+KQSX3.L5 = -0.*1E-4;
+ 
+
+KQS.R1B1   :=  0.0 + (   0.000000000000E+00) * ona2_b1 + ( 0.266278479040E-01) * CMRS.b1 + (-0.899733288016E-02) * CMIS.b1 + ( 0.000000000000E+00) * CMRS.b1_sq + ( 0.000000000000E+00) * CMIS.b1_sq  ;
+ KQS.L2B1   := 0.0 +(   0.000000000000E+00) * ona2_b1 + ( 0.266278479040E-01) * CMRS.b1 + (-0.899733288016E-02) * CMIS.b1 + ( 0.000000000000E+00) * CMRS.b1_sq + ( 0.000000000000E+00) * CMIS.b1_sq  ;
+KQS.A23B1   := 0.0 +(   0.000000000000E+00) * ona2_b1 + ( 0.142516736842E-01) * CMRS.b1 + ( 0.848602983914E-02) * CMIS.b1 + ( 0.302173156154E-01) * CMRS.b1_sq + ( 0.109843179604E-01) * CMIS.b1_sq  ;
+ KQS.R3B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + (-0.171205193764E-01) * CMRS.b1 + (-0.807870546221E-02) * CMIS.b1 + (-0.402300957758E-01) * CMRS.b1_sq + (-0.822964594698E-02) * CMIS.b1_sq  ;
+ KQS.L4B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + (-0.171205193764E-01) * CMRS.b1 + (-0.807870546221E-02) * CMIS.b1 + (-0.402300957758E-01) * CMRS.b1_sq + (-0.822964594698E-02) * CMIS.b1_sq  ;
+KQS.A45B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + ( 0.113812285983E-01) * CMRS.b1 + ( 0.955159460427E-02) * CMIS.b1 + ( 0.000000000000E+00) * CMRS.b1_sq + ( 0.000000000000E+00) * CMIS.b1_sq  ;
+ KQS.R5B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + ( 0.792323136002E-02) * CMRS.b1 + ( 0.100926247998E-01) * CMIS.b1 + ( 0.000000000000E+00) * CMRS.b1_sq + ( 0.000000000000E+00) * CMIS.b1_sq  ;
+ KQS.L6B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + ( 0.792323136002E-02) * CMRS.b1 + ( 0.100926247998E-01) * CMIS.b1 + ( 0.000000000000E+00) * CMRS.b1_sq + ( 0.000000000000E+00) * CMIS.b1_sq  ;
+KQS.A67B1   := 0.0 + (   0.000000000000E+00) * ona2_b1 + (-0.158692136780E-01) * CMRS.b1 + ( 0.106460324212E-01) * CMIS.b1 + (-0.709778694350E-01) * CMRS.b1_sq + ( 0.349381515069E-01) * CMIS.b1_sq  ;
+ KQS.R7B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + (-0.739140462540E-02) * CMRS.b1 + (-0.987710657697E-02) * CMIS.b1 + (-0.549901960504E-02) * CMRS.b1_sq + (-0.185504800255E-01) * CMIS.b1_sq  ;
+ KQS.L8B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + (-0.739140462540E-02) * CMRS.b1 + (-0.987710657697E-02) * CMIS.b1 + (-0.549901960504E-02) * CMRS.b1_sq + (-0.185504800255E-01) * CMIS.b1_sq  ;
+KQS.A81B1   := 0.0 +  (   0.000000000000E+00) * ona2_b1 + ( 0.241324775639E-01) * CMRS.b1 + (-0.962582146500E-02) * CMIS.b1 + ( 0.000000000000E+00) * CMRS.b1_sq + ( 0.000000000000E+00) * CMIS.b1_sq  ;
+
+
+!adding quadrupole error
+select, flag = error, class = quadrupole, pattern = R3;
+efcomp, order = 2, dkn = {0,0.};
+
+select, flag = error, clear = true;
+
+
+SELECT, FLAG=ERROR, CLASS=quadrupole, PATTERN = .;
+SELECT, FLAG=ERROR, CLASS=quadrupole, PATTERN = .;
+EFCOMP, ORDER=2, dks := {0,0.000001*gauss()};
+!ESAVE, FILE="errors.out";
+
+
+
+tsplit = 2;
+
+! closest tune
+ dQx.b10=dQx.b1;
+ dQy.b10=dQy.b1;
+ qmid=(qx0-qx00+qy0-qy00)*0.5;
+
+ match;
+ global, q1=62.305,q2=60.305;
+ vary,   name=dQx.b1, step=1.E-9;
+ vary,   name=dQy.b1, step=1.E-9;
+ lmdif,  calls=50, tolerance=1.E-5;
+ endmatch;
+
+
+! Quick minimization based on linear machine
+ CMRS0 = CMRS.b1_sq;
+ CMIS0 = CMIS.b1_sq;
+ twiss; qx=table(summ,q1); qy=table(summ,q2);
+
+ cta0     = abs(qx-qy-tsplit);
+ closest0 = cta0;
+ CMRS.b1_sq  = CMRS0+cta0/2.;
+ twiss; qx=table(summ,q1); qy=table(summ,q2);
+
+ ctap     = abs(qx-qy-tsplit);
+ CMRS.b1_sq  = CMRS0-cta0/2.;
+ twiss; qx=table(summ,q1); qy=table(summ,q2);
+
+ ctam     = abs(qx-qy-tsplit);
+ CMRS.b1_sq  = CMRS0+(ctam^2-ctap^2)/2./cta0;
+ twiss; qx=table(summ,q1); qy=table(summ,q2);
+
+ cta0     = abs(qx-qy-tsplit);
+ CMIS.b1_sq  = CMIS0+cta0/2.;
+ twiss; qx=table(summ,q1); qy=table(summ,q2);
+
+ ctap     = abs(qx-qy-tsplit);
+ CMIS.b1_sq  = CMIS0-cta0/2.;
+ twiss; qx=table(summ,q1); qy=table(summ,q2);
+
+ ctam     = abs(qx-qy-tsplit);
+ CMIS.b1_sq  = CMIS0+(ctam^2-ctap^2)/2./cta0;
+ twiss; qx=table(summ,q1); qy=table(summ,q2);
+
+ closest1 =abs(qx-qy-tsplit);
+
+
+!Empirical minimisation
+ match;
+ global, q1=62.305,q2=60.305;
+ vary,   name=dQx.b1, step=1.E-9;
+ vary,   name=dQy.b1, step=1.E-9;
+ lmdif,  calls=100,tolerance=1.E-6;
+ endmatch;
+
+ match;
+ global, q1=62.305,q2=60.305;
+ vary,   name=CMRS.b1_sq, step=1.E-9;
+ vary,   name=CMIS.b1_sq, step=1.E-9;
+ lmdif,  calls=150, tolerance=2.E-6;
+ endmatch;
+
+ match;
+ global, q1=62.305,q2=60.305;
+ vary,   name=dQx.b1, step=1.E-9;
+ vary,   name=dQy.b1, step=1.E-9;
+ lmdif,  calls=100, tolerance=1.E-7;
+ endmatch;
+
+ match;
+ global, q1=62.305,q2=60.305;
+ vary,   name=CMRS.b1_sq, step=1.E-9;
+ vary,   name=CMIS.b1_sq, step=1.E-9;
+ lmdif,  calls=150, tolerance=2.E-7;
+ endmatch;
+
+ match;
+ global, q1=62.305,q2=60.305;
+ vary,   name=dQx.b1, step=1.E-9;
+ vary,   name=dQy.b1, step=1.E-9;
+ lmdif,  calls=100, tolerance=1.E-7;
+ endmatch;
+
+ twiss;  qx=table(summ,q1); qy=table(summ,q2);
+ closest2=abs(qx-qy-tsplit);
+ value, closest0, closest1, closest2, CMRS.b1_sq, CMIS.b1_sq;
+
+ select, flag = save ,class = variable, PATTERN="CMIS.b1_sq$";
+ select, flag = save ,class = variable, pattern="CMRS.b1_sq$";
+ save, file ="knob.txt";
+ 
+
+return;

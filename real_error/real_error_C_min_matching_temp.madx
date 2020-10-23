@@ -1,4 +1,5 @@
-system,"ln -fns /home/eirik/CERN/lhc2018/2018 lhc";
+!system,"ln -fns /home/eirik/CERN/lhc2018/2018 lhc";
+system,"ln -fns /afs/cern.ch/eng/lhc/optics/runII/2018 lhc";
 
 Option, -echo,-warn,-info;
 call,file="lhc/lhc_as-built.seq";

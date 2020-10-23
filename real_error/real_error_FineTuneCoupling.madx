@@ -1,6 +1,7 @@
 !fine tuning of coupling   (S.Fartoukh)
 
-system,"ln -fns /home/eirik/CERN/lhc2018/2018 lhc";
+!system,"ln -fns /home/eirik/CERN/lhc2018/2018 lhc";
+system,"ln -fns %lhc_path lhc";
 
 Option, -echo,-warn,-info;
 call,file="lhc/lhc_as-built.seq";

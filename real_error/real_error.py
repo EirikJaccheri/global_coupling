@@ -1,15 +1,16 @@
 import sys
 sys.path.append("../global_coupling/")
 from global_coupling import *
-     
-modulename = 'global_coupling'
+      
+modulename = "global_coupling"
 if modulename in sys.modules:
-    print 'You have imported the {} module'.format(modulename)
+    print("You have imported the {} module".format(modulename))
 
-madx_path = "/home/eirik/madx "
-response_path = "/home/eirik/CERN/real_error/real_error_response.madx"
-C_min_path = "/home/eirik/CERN/real_error/real_error_C_min_matching.madx"
-FineTuneCoupling_path = "/home/eirik/CERN/real_error/real_error_FineTuneCoupling.madx"
+madx_path = "/home/ehoydals/madx "
+response_path = "/home/ehoydals/global_coupling_correction/real_error/real_error_response.madx"
+C_min_path = "/home/ehoydals/global_coupling_correction/real_error/real_error_C_min_matching.madx"
+FineTuneCoupling_path = "/home/ehoydals/global_coupling_correction/real_error/real_error_FineTuneCoupling.madx"
+
 path_dict = {}
 path_dict["madx_path"] = madx_path
 path_dict["response_path"] = response_path
@@ -17,8 +18,14 @@ path_dict["C_min_path"] = C_min_path
 path_dict["FineTuneCoupling_path"] = FineTuneCoupling_path
 set_global_paths(path_dict)
 
+lhc_path =  "/afs/cern.ch/eng/lhc/optics/runII/2018"
 
-	
+reset_response_dict_new = {
+"%error_strength" : "0.",
+"%measured_C_min_comment" : "!"
+}
+set_reset_dict(reset_response_dict,reset_response_dict_new)
+
 def plot_real_error_correction(change_dict,n_steps,savepath):
 	change_dict_local = copy.deepcopy(change_dict)
 	measured_C_min_Re = float(change_dict_local["%measured_C_min_Re_value"])
@@ -72,8 +79,8 @@ def plot_real_error_correction(change_dict,n_steps,savepath):
 	plt.savefig("plots/" + savepath)
 	plt.show()
 
-
 change_dict = {}
+change_dict["%lhc_path"] = lhc_path
 change_dict["%knob_Re_value"] = "0."
 change_dict["%knob_Im_value"] = "0."
 change_dict["%knob_Re_type"] = "CMRS.b1_sq"

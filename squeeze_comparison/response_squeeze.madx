@@ -1,0 +1,52 @@
+
+system,"ln -fns %lhc_path lhc";
+
+Option, -echo,-warn,-info;
+call,file="lhc/lhc_as-built.seq";
+call,file="lhc/toolkit/macro.madx";
+call,file="lhc/PROTON/%opticsfile";
+!call,file="lhc/PROTON/opticsfile.1";
+
+Option, echo,warn,info;
+exec,mk_beam(6500);
+use, sequence=lhcb1;
+
+
+
+%knob_Re_type    :=   %knob_Re_value;
+%knob_Im_type    :=   %knob_Im_value;
+
+
+
+KQSX3.R1 = %colknob1*1E-4;
+KQSX3.L1 = -%colknob1*1E-4;
+
+KQSX3.R5 = %colknob5*1E-4;
+KQSX3.L5 = -%colknob5*1E-4; 
+ 
+
+!adding quadrupole error
+select, flag = error, class = %quad_component, pattern = %quad_pattern_1;
+efcomp, order = 2, dkn = {0,%quad_strength};
+
+select, flag = error, clear = true;
+
+!adding skew quadrupole error
+SELECT, FLAG=ERROR, CLASS=%error_component, PATTERN = %pattern_1;
+SELECT, FLAG=ERROR, CLASS=%error_component, PATTERN = %pattern_2;
+EFCOMP, ORDER=2, dks := {0,%error_strength};
+ESAVE, FILE="errors.out";
+
+
+
+MATCH, SEQUENCE=lhcb1;
+VARY, NAME=dQx.b1, STEP=1.0E-5;
+VARY, NAME=dQy.b1, STEP=1.0E-5;
+CONSTRAINT, SEQUENCE=lhcb1, RANGE=#e, MUX=62.31, MUY=60.32;
+LMDIF, CALLS=100, TOLERANCE=0.0000001;
+endmatch;
+
+
+select, flag = twiss, pattern =%twiss_pattern;
+twiss, file="output_files/twiss.original";
+stop;

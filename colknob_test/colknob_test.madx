@@ -1,4 +1,4 @@
-system,"ln -fns /home/eirik/CERN/lhc2018/2018 lhc";
+system,"ln -fns /afs/cern.ch/eng/lhc/optics/runII/2018 lhc";
 
 Option, -echo,-warn,-info;
 call,file="lhc/lhc_as-built.seq";
@@ -10,10 +10,10 @@ Option, echo,warn,info;
 exec,mk_beam(6500);
 !use, sequence=lhcb1;
 
-SEQEDIT, SEQUENCE=lhcb1;
-	flatten;
-	cycle, start =IP2;
-ENDEDIT;
+!SEQEDIT, SEQUENCE=lhcb1;
+!	flatten;
+!	cycle, start =IP2;
+!ENDEDIT;
 
 use, sequence=lhcb1;
 
