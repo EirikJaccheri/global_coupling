@@ -38,6 +38,21 @@ KQS.A67B1   := %Var8 + (   0.000000000000E+00) * ona2_b1 + (-0.158692136780E-01)
  KQS.L8B1   := %Var10 +  (   0.000000000000E+00) * ona2_b1 + (-0.739140462540E-02) * CMRS.b1 + (-0.987710657697E-02) * CMIS.b1 + (-0.549901960504E-02) * CMRS.b1_sq + (-0.185504800255E-01) * CMIS.b1_sq  ;
 KQS.A81B1   := %Var11 +  (   0.000000000000E+00) * ona2_b1 + ( 0.241324775639E-01) * CMRS.b1 + (-0.962582146500E-02) * CMIS.b1 + ( 0.000000000000E+00) * CMRS.b1_sq + ( 0.000000000000E+00) * CMIS.b1_sq  ;
 
+output, KQS.R1B1;
+output, KQS.L2B2;
+output, KQS.A23B1;
+output, KQS.R3B1;
+output, KQS.L4B1;
+output, KQS.A45B1;
+output, KQS.R5B1;
+output, KQS.L6B1;
+output, KQS.A67B1;
+output, KQS.R7B1;
+output, KQS.L8B1;
+output, KQS.A81B1;
+
+
+
 !adding quadrupole error
 select, flag = error, class = %quad_component, pattern = %quad_pattern_1;
 efcomp, order = 2, dkn = {0,%quad_strength};

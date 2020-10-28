@@ -1,5 +1,5 @@
 
-system,"ln -fns /afs/cern.ch/eng/lhc/optics/runII/2018 lhc";
+system,"ln -fns /home/eirik/CERN/lhc2018/2018 lhc";
 
 Option, -echo,-warn,-info;
 call,file="lhc/lhc_as-built.seq";
@@ -26,6 +26,7 @@ KQSX3.L5 = -0.*1E-4;
  
 
 !adding quadrupole error
+select, flag = error, class = quadrupole, pattern = R3;
 select, flag = error, class = quadrupole, pattern = R8;
 efcomp, order = 2, dkn = {0,0.};
 

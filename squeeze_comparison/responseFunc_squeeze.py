@@ -7,10 +7,13 @@ if modulename in sys.modules:
     print("You have imported the {} module".format(modulename))
 
 N_error = 12
-madx_path = "/home/ehoydals/madx "
-response_path = "/home/ehoydals/global_coupling_correction/squeeze_comparison/response_squeeze.madx"
-C_min_path = "/home/ehoydals/global_coupling_correction/squeeze_comparison/exact_C_min_squeeze.madx"
-FineTuneCoupling_path = "/home/ehoydals/global_coupling_correction/squeeze_comparison/FineTuneCoupling_squeeze.madx"
+
+madx_path = "/home/eirik/madx "
+
+folder_path = "/home/eirik/CERN/global_coupling_correction/squeeze_comparison/"
+response_path = folder_path + "response_squeeze.madx"
+C_min_path = folder_path + "exact_C_min_squeeze.madx"
+FineTuneCoupling_path = folder_path + "FineTuneCoupling_squeeze.madx"
 
 path_dict = {}
 path_dict["madx_path"] = madx_path
@@ -19,7 +22,8 @@ path_dict["C_min_path"] = C_min_path
 path_dict["FineTuneCoupling_path"] = FineTuneCoupling_path
 set_global_paths(path_dict)
 
-lhc_path =  "/afs/cern.ch/eng/lhc/optics/runII/2018"
+#lhc_path =  "/afs/cern.ch/eng/lhc/optics/runII/2018" #work
+lhc_path = "/home/eirik/CERN/lhc2018/2018" #home
 
 reset_response_dict_new = {"%error_component" : "quadrupole",
 	"%error_strength" : "0.",
@@ -59,11 +63,12 @@ def delQ_min_old(Q1,Q2,f_R,f_I,S,MUX,MUY):
 
 
 def plot_squeeze_comparison(change_dict,savepath):
-	#satte knobs lik 0 tidligere, burde jeg gjore det? double correction?
-	change_dict_local = copy.deepcopy(change_dict)	
+	change_dict_local = copy.deepcopy(change_dict)
+	change_value(change_dict_local,"%knob_Re_value","0.")
+	change_value(change_dict_local,"%knob_Im_value","0.")
+		
 	C_min_0 = get_C_min(change_dict_local)
-	print(C_min_0)
-	time.sleep(10)
+	
 	
 		
 	#squeeze knobs
@@ -74,6 +79,7 @@ def plot_squeeze_comparison(change_dict,savepath):
 	f_madx_sq =  get_f(response_path,"twiss.original",change_dict_local)
 	C_min_madx_sq = get_C_min(change_dict_local)
 	set_knobs(change_dict_local,0.,0.)
+
 	
 	R_inverse_sq = get_responsematrix(change_dict_local)
 	tw40cm0_sq = get_twiss(response_path,"twiss.original",change_dict_local)
@@ -81,8 +87,12 @@ def plot_squeeze_comparison(change_dict,savepath):
 	set_knobs(change_dict_local,knob_Re_res_sq, knob_Im_res_sq) 
 	f_res_sq = get_f(response_path,"twiss.original",change_dict_local)
 	C_min_res_sq = get_C_min(change_dict_local)
-	set_knobs(change_dict_local,0.,0.)	
-
+	#double correction
+	dKnob_Re_res_sq , dKnob_Im_res_sq = get_response_knobs(R_inverse_sq,change_dict_local)
+	set_knobs(change_dict_local,knob_Re_res_sq + dKnob_Re_res_sq , knob_Im_res_sq + dKnob_Im_res_sq )
+	f_double_res_sq =  get_f(response_path,"twiss.original",change_dict_local)
+	C_min_double_res_sq = get_C_min(change_dict_local)
+	set_knobs(change_dict_local,0.,0.)
 	
 	change_value(change_dict_local,"%twiss_pattern",".")
 	set_knobs(change_dict_local,knob_Re_res_sq, knob_Im_res_sq) 
@@ -111,6 +121,11 @@ def plot_squeeze_comparison(change_dict,savepath):
 	set_knobs(change_dict_local,knob_Re_res, knob_Im_res) 
 	f_res = get_f(response_path,"twiss.original",change_dict_local)
 	C_min_res = get_C_min(change_dict_local)
+	#double correction
+	dKnob_Re_res , dKnob_Im_res = get_response_knobs(R_inverse,change_dict_local)
+	set_knobs(change_dict_local,knob_Re_res + dKnob_Re_res , knob_Im_res + dKnob_Im_res )
+	f_double_res =  get_f(response_path,"twiss.original",change_dict_local)
+	C_min_double_res = get_C_min(change_dict_local)
 	set_knobs(change_dict_local,0.,0.)
 			
 	
@@ -127,16 +142,21 @@ def plot_squeeze_comparison(change_dict,savepath):
 	
 	S = np.array(tw40cm0.S)	
 	f_0 = np.array(tw40cm0.F1001R) + 1j * np.array(tw40cm0.F1001I)	
-	betax_rms_error,betay_rms_error,beta_max_error, beta_TEST = get_beta_error(change_dict)
+	beta_max_error, beta_TEST = get_beta_error(change_dict)[0:2:]
+	
+	quad_pattern = change_dict["%quad_pattern_1"]
+	if change_dict["%quad_pattern_2"] != change_dict["%quad_pattern_1"]:
+		quad_pattern += " and " + change_dict["%quad_pattern_2"]  
 
 	fig = plt.figure(figsize=plt.figaspect(0.5))
-	fig.suptitle(r"$C_0$ = " + "{:.2e}".format(C_min_0)  + r"	$\beta_{max}$ =" + str(round(beta_max_error,2))+"	quad_section = " + change_dict["%quad_pattern_1"])
+	fig.suptitle(r"$C_0$ = " + "{:.3e}".format(C_min_0)  + r"	$\beta_{max}$ =" + str(round(beta_max_error,3))+"	quad_section = " + quad_pattern)
 
 	ax1 = fig.add_subplot(1,2,1)
 	ax1.plot(S,abs(f_0),label = "before response")
 	ax1.plot(S,abs(f_madx),label = "madx matching correction")
 	ax1.plot(S,abs(f_res),label = "response matrix")
-	ax1.set_title("regular knobs \n $C_-^{res}$ =" + "{:.2e}".format(C_min_res) + "	$C_-^{match}$ =" + "{:.2e}".format(C_min_madx) +"\n"+ r"<|K1SL|> =" + "{:.2e}".format(mean_strength))
+	ax1.plot(S,abs(f_double_res),label = "response matrix double correction")
+	ax1.set_title("regular knobs \n $C_-^{res}$ =" + "{:.2e}".format(C_min_res) +  " $C_-^{Double res}$ =" + "{:.2e}".format(C_min_double_res) +"\n"" $C_-^{match}$ =" + "{:.2e}".format(C_min_madx) + r"<|K1SL|> =" + "{:.2e}".format(mean_strength))
 	ax1.set_xlabel("S")
 	ax1.set_ylabel("F1001")	
 	ax1.legend()	
@@ -145,17 +165,18 @@ def plot_squeeze_comparison(change_dict,savepath):
 	ax2.plot(S,abs(f_0),label = "before response")
 	ax2.plot(S,abs(f_madx_sq),label = "madx matching correction")
 	ax2.plot(S,abs(f_res_sq),label = "response matrix")
-	ax2.set_title("squeeze knobs \n $C_-^{res sq}$ =" + "{:.2e}".format(C_min_res_sq) + "	$C_-^{match sq}$ =" + "{:.2e}".format(C_min_madx_sq) + "\n" + r"$<|K1SL|>_{sq}$ =" + "{:.2e}".format(mean_strength_sq))
+	ax2.plot(S,abs(f_double_res_sq),label = "response matrix double correction")
+	ax2.set_title("squeeze knobs \n $C_-^{res sq}$ =" + "{:.2e}".format(C_min_res_sq) +  " $C_-^{Double res sq}$ =" + "{:.2e}".format(C_min_double_res_sq) + "\n" +" $C_-^{match sq}$ =" + "{:.2e}".format(C_min_madx_sq) + r"$<|K1SL|>_{sq}$ =" + "{:.2e}".format(mean_strength_sq))
 	ax2.set_xlabel("S")
 	ax2.set_ylabel("F1001")
 	ax2.legend()
 	fig.tight_layout(rect=[0, 0.03, 1, 0.95])	
 	plt.savefig('plots/' + savepath)
-	plt.show()
+	#plt.show()
 	#plt.plot(S,beta_TEST)
 	#plt.show()
 
-def plot_correction_test(chagne_dict,savepath):
+def plot_correction_test(changse_dict,savepath):
 	change_dict_local = copy.deepcopy(change_dict)	
 	C_min_0 = get_C_min(change_dict_local)
 	tw40cm0 = get_twiss(response_path,"twiss.original",change_dict_local)
@@ -176,10 +197,13 @@ def plot_correction_test(chagne_dict,savepath):
 	C_min_res = get_C_min(change_dict_local)
 	set_knobs(change_dict_local,0., 0.)
 
-	betax_rms_error,betay_rms_error,beta_max_error, beta_TEST = get_beta_error(change_dict)
-
+	beta_max_error, beta_TEST = get_beta_error(change_dict)[0:2]
+	quad_pattern = change_dict["%quad_pattern_1"]
+	if change_dict["%quad_pattern_2"] != change_dict["%quad_pattern_1"]:
+		quad_pattern += " and " + change_dict["%quad_pattern_2"]  
+	
 	fig = plt.figure(figsize=plt.figaspect(1))
-	fig.suptitle("$C_0$ = " + "{:.3e}".format(C_min_0) + r" $\beta_{max}$ = " + str(round(beta_max_error)) +"	quad_section = " + change_dict["%quad_pattern_1"])
+	fig.suptitle("$C_0$ = " + "{:.3e}".format(C_min_0) + r" $\beta_{max}$ = " + str(round(beta_max_error,3)) +"	quad_section = " + quad_pattern )
 	
 	ax1 = fig.add_subplot(1,1,1)
 	ax1.set_title("$C_{res}$ = " + "{:.3e}".format(C_min_res) + "	$C_{matching}$ = " + "{:.3e}".format(C_min_madx))
@@ -205,155 +229,48 @@ change_dict["%knob_Re_type"] = "CMRS.b1_sq"
 change_dict["%knob_Im_type"] = "CMIS.b1_sq"
 change_dict["%error_component"] = "quadrupole"
 change_dict["%error_strength"] = "0.00003*gauss()"
-#change_dict["%error_strength"] = "0."
 change_dict["%pattern_1"] = "."
 change_dict["%pattern_2"] = "."
 change_dict["%quad_component"] = "quadrupole"
 change_dict["%quad_pattern_1"] = "R5"
+change_dict["%quad_pattern_2"] = "R5"
 change_dict["%quad_strength"] = "0.00008"
-#change_dict["%quad_strength"] = "0."
 change_dict["%twiss_pattern"] = "BPM"
 change_dict["%colknob1"] = "0."
 change_dict["%colknob5"] = "0."
 
-#testing beta_beating
-#tw40cm = get_twiss(response_path,"twiss.original",change_dict)
-#betx = np.array(tw40cm.BETX)
-#betax_rms_error,betay_rms_error,beta_max_error, beta_TEST = get_beta_error(change_dict)
-#S = np.array(tw40cm.S)
-#plt.plot(S,beta_TEST)
-#plt.show()
 
-#plot_correction_test(change_dict,"injectionComparison_randomSQ_localQ_gauss_regular_no_betabeating.pdf")
+
+change_dict["%quad_strength"] = "0.00016"
+change_dict["%quad_pattern_1"] = "R5"
+change_dict["%quad_pattern_2"] = "R5"
 change_dict["%error_strength"] = "0.00003*gauss()"
 plot_squeeze_comparison(change_dict,"injectionComparison_randomSQ_localQ_gauss3_R5.pdf")
 change_dict["%error_strength"] = "0.00002*gauss()"
 plot_squeeze_comparison(change_dict,"injectionComparison_randomSQ_localQ_gauss2_R5.pdf")
 
+change_dict["%quad_strength"] = "0.0001"
 change_dict["%quad_pattern_1"] = "R8"
+change_dict["%quad_pattern_2"] = "R8"
 change_dict["%error_strength"] = "0.00003*gauss()"
 plot_squeeze_comparison(change_dict,"injectionComparison_randomSQ_localQ_gauss3_R8.pdf")
 change_dict["%error_strength"] = "0.00002*gauss()"
 plot_squeeze_comparison(change_dict,"injectionComparison_randomSQ_localQ_gauss2_R8.pdf")
 
-"""
-error_l = np.zeros(N_error)
-error_component = "quadrupole"
-error_strength = "0.00004*gauss()"
-pattern_1 = "R7"
-pattern_2 = "R7"
-quad_component = "quadrupole"
-quad_pattern_1 = "R3"
-quad_strength = "0.00008"
-squeeze = True
-twiss_pattern = "BPM"
-error = [error_l,error_component,error_strength,pattern_1,pattern_2,quad_component,quad_pattern_1,quad_strength,squeeze,twiss_pattern]
-#plot_squeeze_comparison(error,"collisionComparison_randomLocalSQ_localrQ.pdf")
-quad_strength = "0."
-error = [error_l,error_component,error_strength,pattern_1,pattern_2,quad_component,quad_pattern_1,quad_strength,squeeze,twiss_pattern]
-#plot_squeeze_comparison(error,"collisionComparison_randomLocalSQ_localrQ_noBetabeat.pdf")
+change_dict["%quad_strength"] = "0.00005"
+change_dict["%quad_pattern_1"] = "R3"
+change_dict["%quad_pattern_2"] = "R8"
+change_dict["%error_strength"] = "0.00003*gauss()"
+plot_squeeze_comparison(change_dict,"injectionComparison_randomSQ_localQ_gauss3_R3R8.pdf")
+change_dict["%error_strength"] = "0.00002*gauss()"
+plot_squeeze_comparison(change_dict,"injectionComparison_randomSQ_localQ_gauss2_R3R8.pdf")
+
+change_dict["%quad_strength"] = "0."
+change_dict["%quad_pattern_1"] = "R3"
+change_dict["%quad_pattern_2"] = "R8"
+change_dict["%error_strength"] = "0.00003*gauss()"
+plot_squeeze_comparison(change_dict,"injectionComparison_randomSQ_zeroQ_gauss3_R3R8.pdf")
+change_dict["%error_strength"] = "0.00002*gauss()"
+plot_squeeze_comparison(change_dict,"injectionComparison_randomSQ_zeroQ_gauss2_R3R8.pdf")
 
 
-error_l = np.zeros(N_error)
-error_component = "quadrupole"
-error_strength = "0.0000003"
-pattern_1 = "."
-pattern_2 = "."
-quad_component = "quadrupole"
-quad_pattern_1 = "R3"
-quad_strength = "0.00008"
-squeeze = True
-twiss_pattern = "BPM"
-error = [error_l,error_component,error_strength,pattern_1,pattern_2,quad_component,quad_pattern_1,quad_strength,squeeze,twiss_pattern]
-plot_squeeze_comparison(error,"collisionComparison_UniformSQ_localQ.pdf")
-quad_strength = "0."
-error = [error_l,error_component,error_strength,pattern_1,pattern_2,quad_component,quad_pattern_1,quad_strength,squeeze,twiss_pattern]
-plot_squeeze_comparison(error,"collisionComparison_UniformSQ_localQ_noBetabeat.pdf")
-
-error_l = np.zeros(N_error)
-error_component = "quadrupole"
-error_strength = "0.000012"
-pattern_1 = "L7"
-pattern_2 = "R8"
-quad_component = "quadrupole"
-quad_pattern_1 = "R3"
-quad_strength = "0.00008"
-squeeze = False
-twiss_pattern = "BPM"
-error = [error_l,error_component,error_strength,pattern_1,pattern_2,quad_component,quad_pattern_1,quad_strength,squeeze,twiss_pattern]
-#plot_squeeze_comparison(error,"collisionComparison_twoSQ_localQ.pdf")
-quad_strength = "0."
-error = [error_l,error_component,error_strength,pattern_1,pattern_2,quad_component,quad_pattern_1,quad_strength,squeeze,twiss_pattern]
-#plot_squeeze_comparison(error,"collisionComparison_twoSQ_localQ_noBetabeat.pdf")
-"""
-	
-"""
-error_l = np.zeros(N_error)
-error_component = "quadrupole"
-error_strength = "0.00004*gauss()"
-pattern_1 = "R7"
-pattern_2 = "R7"
-quad_component = "quadrupole"
-quad_pattern_1 = "R3"
-quad_strength = "0.00008"
-squeeze = True
-twiss_pattern = "BPM"
-error = [error_l,error_component,error_strength,pattern_1,pattern_2,quad_component,quad_pattern_1,quad_strength,squeeze,twiss_pattern]
-plot_squeeze_comparison(error,"injectionComparison_randomLocalSQ_localrQ.pdf")
-quad_strength = "0."
-error = [error_l,error_component,error_strength,pattern_1,pattern_2,quad_component,quad_pattern_1,quad_strength,squeeze,twiss_pattern]
-plot_squeeze_comparison(error,"injectionComparison_randomLocalSQ_localrQ_noBetabeat.pdf")
-
-
-error_l = np.zeros(N_error)
-error_component = "quadrupole"
-error_strength = "0.000002"
-pattern_1 = "."
-pattern_2 = "."
-quad_component = "quadrupole"
-quad_pattern_1 = "R3"
-quad_strength = "0.00008"
-squeeze = True
-twiss_pattern = "BPM"
-error = [error_l,error_component,error_strength,pattern_1,pattern_2,quad_component,quad_pattern_1,quad_strength,squeeze,twiss_pattern]
-plot_squeeze_comparison(error,"injectionComparison_UniformSQ_localQ.pdf")
-quad_strength = "0."
-error = [error_l,error_component,error_strength,pattern_1,pattern_2,quad_component,quad_pattern_1,quad_strength,squeeze,twiss_pattern]
-plot_squeeze_comparison(error,"injectionComparison_UniformSQ_localQ_noBetabeat.pdf")
-
-error_l = np.zeros(N_error)
-error_component = "quadrupole"
-error_strength = "0.00002"
-pattern_1 = "L7"
-pattern_2 = "R8"
-quad_component = "quadrupole"
-quad_pattern_1 = "R3"
-quad_strength = "0.00008"
-squeeze = False
-twiss_pattern = "BPM"
-error = [error_l,error_component,error_strength,pattern_1,pattern_2,quad_component,quad_pattern_1,quad_strength,squeeze,twiss_pattern]
-plot_squeeze_comparison(error,"injectionComparison_twoSQ_localQ.pdf")
-quad_strength = "0."
-error = [error_l,error_component,error_strength,pattern_1,pattern_2,quad_component,quad_pattern_1,quad_strength,squeeze,twiss_pattern]
-plot_squeeze_comparison(error,"injectionComparison_twoSQ_localQ_noBetabeat.pdf")
-"""
-
-"""
-R_inverse = get_responsematrix(error[8])
-tw40cm0, knob_Re_res, knob_Im_res = get_response_knobs(R_inverse,error)
-tw40cm1, f_res = get_twiss_rdt(knob_Re_res,knob_Im_res,error)
-S = np.array(tw40cm1.S)
-K1SL1 = np.array(tw40cm1.K1SL)
-error[8] = True
-R_inverse = get_responsematrix(error[8])
-tw40cm0, knob_Re_res, knob_Im_res = get_response_knobs(R_inverse,error)
-tw40cm1, f_res = get_twiss_rdt(knob_Re_res,knob_Im_res,error)
-S = np.array(tw40cm1.S)
-K1SL2 = np.array(tw40cm1.K1SL)
-print(K1SL1[K1SL1 != 0])
-print(K1SL2[K1SL2 != 0])
-print(np.mean(abs(K1SL1[K1SL1 != 0])))
-print(np.mean(abs(K1SL2[K1SL2 != 0])))
-#a = np.array([0.,313,0.,0.,0.,321,33,0.000,4,0.3])
-#print(a[a != 0])
-"""

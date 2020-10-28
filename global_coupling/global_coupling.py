@@ -5,7 +5,10 @@ import sys
 import copy
 import time
 
-sys.path.append("/afs/cern.ch/eng/sl/lintrack/Python_Classes4MAD/")
+#work
+#sys.path.append("/afs/cern.ch/eng/sl/lintrack/Python_Classes4MAD/")
+#home
+sys.path.append("/home/eirik/CERN/beta-Beat/Python_Classes4MAD/")
 try:
      from metaclass import *
 except:
@@ -137,10 +140,6 @@ def get_responsematrix(change_dict):
 
 def get_response_knobs(R_inverse,change_dict):
 	change_dict_local = copy.deepcopy(change_dict)
-	#should they be set to zero?
-	change_value(change_dict_local,"%knob_Re_value","0.")
-	change_value(change_dict_local,"%knob_Im_value","0.")
-	
 	run_madx(response_path,change_dict_local)
 	tw40cm = twiss("output_files/twiss.original")
 	tw40cm.Cmatrix()
@@ -186,7 +185,8 @@ def get_beta_error(change_dict):
 	betax_error = (betax1 - betax0) / betax0
 	betay_error = (betay1 - betay0) / betay0
 	beta_max_error = max(np.max(betax_error),np.max(betay_error))
-	return betax_rmsError,betay_rmsError,beta_max_error, (betax0 - betax1)/betax0
+	beta_beat = (betax0 - betax1)/betax0
+	return beta_max_error, beta_beat, betax0, betax1, betay0,betay1
 	
 	
 def get_mean_strength(change_dict):

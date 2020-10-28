@@ -27,6 +27,7 @@ KQSX3.L5 = -%colknob5*1E-4;
 
 !adding quadrupole error
 select, flag = error, class = %quad_component, pattern = %quad_pattern_1;
+select, flag = error, class = %quad_component, pattern = %quad_pattern_2;
 efcomp, order = 2, dkn = {0,%quad_strength};
 
 select, flag = error, clear = true;
