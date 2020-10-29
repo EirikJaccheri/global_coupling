@@ -6,9 +6,9 @@ import copy
 import time
 
 #work
-#sys.path.append("/afs/cern.ch/eng/sl/lintrack/Python_Classes4MAD/")
+sys.path.append("/afs/cern.ch/eng/sl/lintrack/Python_Classes4MAD/")
 #home
-sys.path.append("/home/eirik/CERN/beta-Beat/Python_Classes4MAD/")
+#sys.path.append("/home/eirik/CERN/beta-Beat/Python_Classes4MAD/")
 try:
      from metaclass import *
 except:

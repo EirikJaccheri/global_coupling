@@ -8,9 +8,16 @@ if modulename in sys.modules:
 
 N_error = 12
 
-madx_path = "/home/eirik/madx "
+#home
+#madx_path = "/home/eirik/madx "
+#folder_path = "/home/eirik/CERN/global_coupling_correction/analytical_test/"
+#lhc_path = "/home/eirik/CERN/lhc2018/2018"
 
-folder_path = "/home/eirik/CERN/global_coupling_correction/analytical_test/"
+#work
+madx_path = "/home/ehoydals/madx "
+folder_path = "/home/ehoydals/global_coupling_correction/analytical_test/"
+lhc_path =  "/afs/cern.ch/eng/lhc/optics/runII/2018"
+
 response_path = folder_path + "response_beta_beat_impact.madx"
 C_min_path = folder_path + "exact_C_min_analytic_test.madx"
 #FineTuneCoupling_path = folder_path + "FineTuneCoupling_squeeze.madx"
@@ -22,8 +29,7 @@ path_dict["C_min_path"] = C_min_path
 #path_dict["FineTuneCoupling_path"] = FineTuneCoupling_path
 set_global_paths(path_dict)
 
-#lhc_path =  "/afs/cern.ch/eng/lhc/optics/runII/2018" #work
-lhc_path = "/home/eirik/CERN/lhc2018/2018" #home
+
 
 reset_response_dict_new = {"%error_component" : "quadrupole",
 	"%error_strength" : "0.",
@@ -133,6 +139,69 @@ def plot_f1001_comparison(change_dict,KS_names,KS):
 	change_value(change_dict_local,"%pattern_1",str(KS_names[0]))
 	change_value(change_dict_local,"%pattern_2",str(KS_names[1]))
 	change_value(change_dict_local,"%error_strength",str(KS[0]))
+	tw40cm = get_twiss(response_path,"twiss.original",change_dict_local)
+	tw40cm.Cmatrix()
+	f1001_madx = np.array(tw40cm.F1001R) + 1j * np.array(tw40cm.F1001I)
+	
+	fig = plt.figure()
+	ax1 = fig.add_subplot(1,1,1)
+	ax1.plot(S,abs(f1001_anal),label = "analytical")
+	ax1.plot(S,abs(f1001_madx),label = "madx")
+	ax1.set_ylim(bottom=0)
+	ax1.set_ylim(top = 2*max(np.max(abs(f1001_madx)),np.max(abs(f1001_anal))))
+	ax1.legend()
+	plt.show()
+
+def plot_f1001_comparison_colknob(change_dict,KS_names,KS):
+	change_dict_local = copy.deepcopy(change_dict)
+	change_value(change_dict_local,"%colknob1","0.")
+	change_value(change_dict_local,"%colknob5","0.")
+	change_value(change_dict_local,"%error_strength","0.")
+	change_value(change_dict_local,"%quad_strength","0.")
+
+	change_value(change_dict_local,"%twiss_pattern",".")
+	
+	tw40cm = get_twiss(response_path,"twiss.original",change_dict_local)
+	name_l = tw40cm.NAME
+	betx = np.array(tw40cm.BETX)
+	bety = np.array(tw40cm.BETY)
+	mux = np.array(tw40cm.MUX)
+	muy = np.array(tw40cm.MUY)
+	Qx = tw40cm.Q1
+	Qy = tw40cm.Q2
+	
+	n_error = len(KS_names)
+	betx_error = np.zeros(n_error)
+ 	bety_error = np.zeros(n_error)
+	mux_error = np.zeros(n_error)
+	muy_error = np.zeros(n_error)
+	
+	KS_index = np.zeros(n_error) 
+	for i in range(n_error):
+		error_index = name_l.index(KS_names[i])	
+		KS_index[i] = error_index
+		
+		betx_error[i] = betx[error_index] 
+	 	bety_error[i] = bety[error_index]
+		mux_error[i] = mux[error_index]
+		muy_error[i] = muy[error_index]
+	
+	change_value(change_dict_local,"%twiss_pattern","BPM")
+	tw40cm = get_twiss(response_path,"twiss.original",change_dict_local)
+	betx_BPM = np.array(tw40cm.BETX)
+	bety_BPM = np.array(tw40cm.BETY)
+	mux_BPM = np.array(tw40cm.MUX)
+	muy_BPM = np.array(tw40cm.MUY)
+	Qx = tw40cm.Q1
+	Qy = tw40cm.Q2
+	
+	S = np.array(tw40cm.S)
+	f1001_anal = f_1001(mux_BPM,muy_BPM,Qx,Qy,betx_error,bety_error,mux_error,muy_error,KS)
+	
+	#change_value(change_dict_local,"%pattern_1",str(KS_names[0]))
+	#change_value(change_dict_local,"%pattern_2",str(KS_names[1]))
+	#change_value(change_dict_local,"%error_strength",str(KS[0]))
+	change_value(change_dict_local,"%colknob1",str(KS[1] / 1e-4))
 	tw40cm = get_twiss(response_path,"twiss.original",change_dict_local)
 	tw40cm.Cmatrix()
 	f1001_madx = np.array(tw40cm.F1001R) + 1j * np.array(tw40cm.F1001I)
@@ -274,8 +343,11 @@ def plot_response_matrix_comparison(change_dict,savepath):
 	f_res = get_f(response_path,"twiss.original",change_dict_local)
 	C_min_res = get_C_min(change_dict_local)
 	
+	beta_max, beta_beat = get_beta_error(change_dict_local)[0:2:]
+
 	fig = plt.figure()
-	fig.suptitle(r"$C_0$ = " + "{:.3e}".format(C_min_0) + r"	$C_{analytic-res}$ = " + "{:.3e}".format(C_min_analytic_res) + r"	$C_{res}$ = " + "{:.3e}".format(C_min_res))
+	fig.suptitle(r"$\beta_{max}$ = " + str(round(beta_max,3)) + '\n' + r"$C_0$ = " + "{:.3e}".format(C_min_0) + r"	$C_{analytic-res}$ = " + "{:.3e}".format(C_min_analytic_res) + r"	$C_{res}$ = " + "{:.3e}".format(C_min_res))
+	
 	
 	print(np.linalg.norm(R_inverse_analytic - R_inverse) / np.linalg.norm(R_inverse))
 	
@@ -287,9 +359,56 @@ def plot_response_matrix_comparison(change_dict,savepath):
 	plt.savefig('plots/' + savepath)
 	plt.show()
 	
+	plt.plot(S,beta_beat)
+	plt.show()
+
+def plot_analytical_response_betabeating_impact(change_dict,savepath):
+	change_dict_local = copy.deepcopy(change_dict)
+	f_0 = get_f(response_path,"twiss.original",change_dict_local)
+	C_min_0 = get_C_min(change_dict_local)
+	
+	R_inverse_analytic =  get_analytic_response_matrix(change_dict_local)
+	knob_Re_analytic_res, knob_Im_analytic_res = get_response_knobs(R_inverse_analytic,change_dict_local)
+	change_value(change_dict_local,"%knob_Re_value",str(knob_Re_analytic_res))
+	change_value(change_dict_local,"%knob_Im_value",str(knob_Im_analytic_res))
+	tw40cm = get_twiss(response_path,"twiss.original",change_dict_local)
+	tw40cm.Cmatrix()
+	S = np.array(tw40cm.S)
+	f_analytic_res = np.array(tw40cm.F1001R) + 1j * np.array(tw40cm.F1001I)
+	C_min_analytic_res = get_C_min(change_dict_local)
+	
+	change_value(change_dict_local,"%quad_strength","0.")
+	R_inverse_analytic_zeroQ =  get_analytic_response_matrix(change_dict_local)
+	change_value(change_dict_local,"%quad_strength",change_dict["%quad_strength"])
+	knob_Re_analytic_zeroQ_res, knob_Im_analytic_zeroQ_res = get_response_knobs(R_inverse_analytic_zeroQ,change_dict_local)
+	change_value(change_dict_local,"%knob_Re_value",str(knob_Re_analytic_zeroQ_res))
+	change_value(change_dict_local,"%knob_Im_value",str(knob_Im_analytic_zeroQ_res))
+	tw40cm = get_twiss(response_path,"twiss.original",change_dict_local)
+	tw40cm.Cmatrix()
+	S = np.array(tw40cm.S)
+	f_analytic_zeroQ_res = np.array(tw40cm.F1001R) + 1j * np.array(tw40cm.F1001I)
+	C_min_analytic_zeroQ_res = get_C_min(change_dict_local)
+	
+	beta_max, beta_beat = get_beta_error(change_dict_local)[0:2:]
+
+	fig = plt.figure()
+	fig.suptitle(r"$\beta_{max}$ = " + str(round(beta_max,3)) + '\n' + r"$C_0$ = " + "{:.3e}".format(C_min_0) + r"	$C_{analytic-res}$ = " + "{:.3e}".format(C_min_analytic_res) + r"	$C_{analytic-zeroQ-res}$ = " + "{:.3e}".format(C_min_analytic_zeroQ_res))
 	
 	
+	print(np.linalg.norm(R_inverse_analytic - R_inverse_analytic_zeroQ) / np.linalg.norm(R_inverse_analytic_zeroQ))
 	
+	ax1 = fig.add_subplot(1,1,1)
+	ax1.plot(S,abs(f_0),label = "f_0")
+	ax1.plot(S,abs(f_analytic_res),label = "f_analytic_res")
+	ax1.plot(S,abs(f_analytic_zeroQ_res),label = "f_analytic_zero_Q_res")
+	ax1.legend()
+	plt.savefig('plots/' + savepath)
+	plt.show()
+	
+	plt.plot(S,beta_beat)
+	plt.show()
+
+
 change_dict = {}
 change_dict["%lhc_path"] = lhc_path
 #change_dict["%opticsfile"] = "opticsfile.19"
@@ -311,11 +430,23 @@ change_dict["%colknob1"] = "0."
 change_dict["%colknob5"] = "0."
 
 
+#test
+
+#change_dict["%error_strength"] = "0."
+#change_dict["%quad_strength"] = "0."
+#change_dict["%colknob1"] = "10"
+#f = get_f(response_path,"twiss.original",change_dict)
+#plt.plot(abs(f))
+#plt.show()
+
+
 change_dict["%error_strength"] = "0."
-change_dict["%quad_strength"] = "0.00018"
-KS_names = np.array(["MQS.23R1.B1","MQS.27L2.B1"])
-KS = np.array([0.0001,0.0001])
-#plot_f1001_comparison(change_dict,KS_names,KS)
+change_dict["%quad_strength"] = "0."
+KS_names = np.array(["MQSX.3L1","MQSX.3R1"])
+KS = np.array([-0.0001,0.0001])
+#change_dict["%colknob1"] = "0.0001"
+#change_dict["%colknob5"] = "0."
+#plot_f1001_comparison_colknob(change_dict,KS_names,KS)
 
 
 change_dict["%knob_Re_type"] = "CMRS.b1_sq"
@@ -327,13 +458,15 @@ change_dict["%knob_Im_value"] = "0."
 #plot_f1001_knob_comparison(change_dict)
 
 
-
+#have to go through and check these functions
 change_dict["%knob_Re_type"] = "CMRS.b1_sq"
 change_dict["%knob_Im_type"] = "CMIS.b1_sq"
 change_dict["%error_strength"] = "0.00003*gauss()"
-change_dict["%quad_strength"] = "0."
+change_dict["%quad_strength"] = "0.00018"
+#change_dict["%quad_strength"] = "0."
 change_dict["%knob_Re_value"] = "0."
 change_dict["%knob_Im_value"] = "0."
-plot_response_matrix_comparison(change_dict,"response_matrix_comparison2.pdf")
+plot_response_matrix_comparison(change_dict,"response_matrix_comparison_R5_localQ.pdf")
+#plot_analytical_response_betabeating_impact(change_dict,"analytical_betabeating_comparison.pdf")
 
 
