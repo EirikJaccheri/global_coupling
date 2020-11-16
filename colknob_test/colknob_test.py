@@ -7,11 +7,18 @@ if modulename in sys.modules:
     print 'You have imported the {} module'.format(modulename)
 
 path_dict = {}
-madx_path = "/home/ehoydals/madx "
+#home
+madx_path = "/home/eirik/madx "
+folder_path = "/home/eirik/CERN/global_coupling_correction/colknob_test/"
+lhc_path = "/home/eirik/CERN/lhc2018/2018"
+
+#work
+#madx_path = "/home/ehoydals/madx "
+#folder_path = "/home/ehoydals/global_coupling_correction/analytical_test/"
+#lhc_path =  "/afs/cern.ch/eng/lhc/optics/runII/2018"
+
 path_dict["madx_path"] = madx_path
 set_global_paths(path_dict)
-
-lhc_path =  "/afs/cern.ch/eng/lhc/optics/runII/2018"
 
 
 
@@ -37,7 +44,6 @@ def plot_C_min(chagne_dict,n_colknob,colknob_step,savepath):
 	for i in range(n_colknob):
 		change_value(change_dict_local,"%colknob5",str(colknob_l[i]))
 		tw40cm = get_twiss("colknob_test.madx","twiss.test",change_dict_local)
-		Q1, Q2 = tw40cm.Q1, tw40cm.Q2
 		Q1, Q2 = tw40cm.Q1, tw40cm.Q2
 		C_min_5_l[i] = abs(Q1 - Q2 - 2)
 	
@@ -179,7 +185,7 @@ def plot_colknob_percentage_comparison(change_dict,savepath,colknob_value,start,
 	plt.show()
 
 def plot_colknob_perturbation_comparison(change_dict,savepath):
-	colknob_l_perturbation , C_min_1_l_perturbation , C_min_5_l_perturbation = 			plot_C_min_predicted(change_dict,5,0.2,"C_min_predicted_temp1.pdf")
+	colknob_l_perturbation , C_min_1_l_perturbation , C_min_5_l_perturbation = plot_C_min_predicted(change_dict,5,0.2,"C_min_predicted_temp1.pdf")
 	colknob_l_madx , C_min_1_l_madx , C_min_5_l_madx = plot_C_min(change_dict,5,0.2,"C_min_measured_temp1.pdf")
 	fig = plt.figure(figsize = plt.figaspect(0.6))
 
@@ -204,29 +210,57 @@ def plot_colknob_perturbation_comparison(change_dict,savepath):
 	plt.show()
 	
 
+def plot_colknob_f1001(change_dict,savepath,percentage_start,n_steps):
+	change_dict_local = copy.deepcopy(change_dict)
+	fig = plt.figure()
+	ax1 = fig.add_subplot(1,1,1)
+	ax1.set_xlabel("S")
+	ax1.set_ylabel("|f1001|")
+	delta_steps = (1. - percentage_start) / n_steps
+	percentage_l =  np.linspace(percentage_start,1,n_steps)
+	for i in range(n_steps):
+		change_value(change_dict_local,"%percentage",str(percentage_l[i]))
+		tw40cm = get_twiss("colknob_test.madx","twiss.test",change_dict_local)
+		S = np.array(tw40cm.S)
+		f1001 = np.array(tw40cm.F1001R) + 1j * np.array(tw40cm.F1001I)
+		
+		label_string = "percentage: " + str(percentage_l[i])
+		ax1.plot(S,abs(f1001),label = label_string)
+	ax1.legend()
+	plt.savefig("plots/" + savepath)
+	plt.show()
+		
+
 change_dict = {}
+change_dict["%lhc_path"] = "0."
 change_dict["%colknob1"] = "0."
 change_dict["%colknob5"] = "0."
 change_dict["%MUX"] = "62.310"
 change_dict["%MUY"] = "60.320"
-change_dict["%percentage"] = "1"
+change_dict["%percentage"] = "0.99"
 change_dict["%lhc_path"] = lhc_path
+change_dict["%opticsfile"] = "opticsfile.19"
 #plot_C_min(change_dict,2,0.4,"plot_C_min_TEST.pdf")
 #plot_C_min_predicted(change_dict,2,0.4,"plot_C_min_predicted_TEST.pdf")
-#plot_colknob_perturbation_comparison(change_dict,"pertubation_comparison99.pdf")
-plot_colknob_percentage_comparison(change_dict,"knobcomparison_percentage.pdf","5",0.99,5)
+plot_colknob_perturbation_comparison(change_dict,"pertubation_comparison99_opticsfile19.pdf")
+plot_colknob_percentage_comparison(change_dict,"knobcomparison_percentage_opticsfile19.pdf","5",0.99,10)
+
+change_dict_local = copy.deepcopy(change_dict)
+change_value(change_dict_local,"%colknob1","5")
+plot_colknob_f1001(change_dict_local,"f1001_percentage_colknob1_opticsfile19.pdf",0.9,5)
+change_dict_local = copy.deepcopy(change_dict)
+change_value(change_dict_local,"%colknob5","5")
+plot_colknob_f1001(change_dict_local,"f1001_percentage_colknob5_opticsfile19.pdf",0.9,5)
 """
-colknob1 = "0"
-colknob5 = "0"
-matching = False
-percentage = "1"
-error = [colknob1,colknob5,matching,percentage]
-#plot_colknob_percentage_comparison(error,"knobcomparison_percentage.pdf","5",0.99,5)
-	
-colknob1 = "0"
-colknob5 = "0"
-matching = False
-percentage = "0.99"
-error = [colknob1,colknob5,matching,percentage]
-plot_colknob_perturbation_comparison(error,"pertubation_comparison99.pdf")
+change_dict_local = copy.deepcopy(change_dict)
+change_value(change_dict_local,"%colknob5","5.")
+tw40cm = get_twiss("colknob_test.madx","twiss.test",change_dict_local)
+S = np.array(tw40cm.S)
+f1001 = np.array(tw40cm.F1001R) + 1j * np.array(tw40cm.F1001I)
+plt.plot(S,abs(f1001))
+plt.show()
 """
+
+
+
+

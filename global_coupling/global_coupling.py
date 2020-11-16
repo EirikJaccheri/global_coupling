@@ -6,9 +6,9 @@ import copy
 import time
 
 #work
-sys.path.append("/afs/cern.ch/eng/sl/lintrack/Python_Classes4MAD/")
+#sys.path.append("/afs/cern.ch/eng/sl/lintrack/Python_Classes4MAD/")
 #home
-#sys.path.append("/home/eirik/CERN/beta-Beat/Python_Classes4MAD/")
+sys.path.append("/home/eirik/CERN/beta-Beat/Python_Classes4MAD/")
 try:
      from metaclass import *
 except:
@@ -82,14 +82,22 @@ def run_madx(path,change_dict):
 
 def get_twiss(file_path,twiss_path,change_dict):
 	run_madx(file_path,change_dict)
-	return twiss("output_files/" + twiss_path)
+	tw40cm = twiss("output_files/" + twiss_path)
+	tw40cm.Cmatrix()
+	return tw40cm
 
 def get_f(file_path,twiss_path,change_dict):
 	tw40cm = get_twiss(file_path,twiss_path,change_dict)
 	tw40cm.Cmatrix()
 	f_R, f_I = np.array(tw40cm.F1001R) , np.array(tw40cm.F1001I)
 	f = f_R + 1j * f_I
-	return f	
+	return f
+	
+def get_S_f(file_path,twiss_path,change_dict):
+	tw40cm = get_twiss(file_path,twiss_path,change_dict)
+	S = np.array(tw40cm.S)
+	f = np.array(tw40cm.F1001R) + 1j * np.array(tw40cm.F1001I)
+	return S , f
 	
 def change_value(change_dict,key,value):
 	assert key in change_dict, "key not in dictionary"	
@@ -132,7 +140,8 @@ def get_responsematrix(change_dict):
 	f_I_2 = np.array(tw40cm.F1001I)
 	f_2 = np.concatenate((f_R_2,f_I_2))
 
-	R = np.array([f_1/delta_knob,f_2/delta_knob]).T
+	R = np.array(
+	[f_1/delta_knob,f_2/delta_knob]).T
 	R_inverse = np.linalg.pinv(R)
 	return R_inverse
 
@@ -146,7 +155,6 @@ def get_response_knobs(R_inverse,change_dict):
 	f_R = np.array(tw40cm.F1001R)
 	f_I = np.array(tw40cm.F1001I)
 	f = np.concatenate((f_R,f_I))
-	f_c = f_R + 1j * f_I
 	knobs = -1 * np.dot(R_inverse,f)
 	knob_Re, knob_Im = knobs[0], knobs[1]
 	return knob_Re, knob_Im
@@ -188,6 +196,13 @@ def get_beta_error(change_dict):
 	beta_beat = (betax0 - betax1)/betax0
 	return beta_max_error, beta_beat, betax0, betax1, betay0,betay1
 	
+def get_beta_error_rms(change_dict):
+	beta_max_error, beta_beat, betax0, betax1, betay0,betay1 = get_beta_error(change_dict)
+	beta_beatx = (betax0 - betax1)/betax0
+	beta_beaty = (betay0 - betay1)/betay0
+	betax_rms = np.sqrt(np.mean(np.square(beta_beatx)))
+	betay_rms = np.sqrt(np.mean(np.square(beta_beaty)))
+	return betax_rms , betay_rms , beta_beatx, beta_beaty
 	
 def get_mean_strength(change_dict):
 	change_dict_local = copy.deepcopy(change_dict)

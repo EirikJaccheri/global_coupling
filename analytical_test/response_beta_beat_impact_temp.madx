@@ -1,4 +1,4 @@
-system,"ln -fns /afs/cern.ch/eng/lhc/optics/runII/2018 lhc";
+system,"ln -fns /home/eirik/CERN/lhc2018/2018 lhc";
 
 Option, -echo,-warn,-info;
 call,file="lhc/lhc_as-built.seq";
@@ -12,8 +12,8 @@ use, sequence=lhcb1;
 
 
 
-CMRS.b1_sq    :=   0.006151755773135546;
-CMIS.b1_sq    :=   0.0030291896753033972;
+CMRS.b1_sq    :=   0.004118127287527512;
+CMIS.b1_sq    :=   0.00273721261703949;
 
 value, KQS.R1B1;
 value, KQS.L2B2;
@@ -34,19 +34,21 @@ KQSX3.L1 = -0.*1E-4;
 
 KQSX3.R5 = 0.*1E-4;
 KQSX3.L5 = -0.*1E-4; 
+
+value MQSX.3L1;
  
 
 !adding quadrupole error
 select, flag = error, class = quadrupole, pattern = R5;
 select, flag = error, class = quadrupole, pattern = R5;
-efcomp, order = 2, dkn = {0,0.};
+efcomp, order = 2, dkn = {0,0.00018};
 
 select, flag = error, clear = true;
 
 !adding skew quadrupole error
 SELECT, FLAG=ERROR, CLASS=quadrupole, PATTERN = .;
 SELECT, FLAG=ERROR, CLASS=quadrupole, PATTERN = .;
-EFCOMP, ORDER=2, dks := {0,0.};
+EFCOMP, ORDER=2, dks := {0,0.00003*gauss()};
 ESAVE, FILE="errors.out";
 
 
@@ -54,7 +56,7 @@ ESAVE, FILE="errors.out";
 MATCH, SEQUENCE=lhcb1;
 VARY, NAME=dQx.b1, STEP=1.0E-5;
 VARY, NAME=dQy.b1, STEP=1.0E-5;
-CONSTRAINT, SEQUENCE=lhcb1, RANGE=#e, MUX=62.31, MUY=60.32;
+CONSTRAINT, SEQUENCE=lhcb1, RANGE=#e, MUX=62.30, MUY=60.33;
 LMDIF, CALLS=100, TOLERANCE=0.0000001;
 endmatch;
 

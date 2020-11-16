@@ -1,9 +1,9 @@
-system,"ln -fns /afs/cern.ch/eng/lhc/optics/runII/2018 lhc";
+system,"ln -fns %lhc_path lhc";
 
 Option, -echo,-warn,-info;
 call,file="lhc/lhc_as-built.seq";
 call,file="lhc/toolkit/macro.madx";
-call,file="lhc/PROTON/opticsfile.19";
+call,file="lhc/PROTON/%opticsfile";
 !call,file="lhc/PROTON/opticsfile.1";
 
 Option, echo,warn,info;
@@ -35,12 +35,12 @@ CONSTRAINT, SEQUENCE=lhcb1, RANGE=#e, MUX=%MUX, MUY=%MUY;
 LMDIF, CALLS=100, TOLERANCE=0.0000001;
 endmatch;
 
-
+select, flag = twiss,pattern = BPM;
 select, flag = twiss,pattern = MQSX.3R1;
 select, flag = twiss,pattern = MQSX.3L1;
 select, flag = twiss,pattern = MQSX.3R5;
 select, flag = twiss,pattern = MQSX.3L5;
-twiss,centre = true file="twiss.test";
+twiss,centre = true file="output_files/twiss.test";
 qx=table(summ,q1); qy=table(summ,q2);
 
 C_minus = abs(qx - qy - 2);

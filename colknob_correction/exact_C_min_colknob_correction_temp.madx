@@ -1,0 +1,49 @@
+system,"ln -fns /home/eirik/CERN/lhc2018/2018 lhc";
+
+Option, -echo,-warn,-info;
+call,file="lhc/lhc_as-built.seq";
+call,file="lhc/toolkit/macro.madx";
+call,file="lhc/PROTON/opticsfile.19";
+!call,file="lhc/PROTON/opticsfile.1";
+
+Option, echo,warn,info;
+exec,mk_beam(6500);
+use, sequence=lhcb1;
+
+
+CMRS.b1_sq    :=   0.0057630052860769025;
+CMIS.b1_sq    :=   -1.9595073787698426e-05;
+
+
+KQSX3.R1 = 5*1E-4;
+KQSX3.L1 = -5*1E-4;
+
+KQSX3.R5 = 0.*1E-4;
+KQSX3.L5 = -0.*1E-4;
+ 
+
+!adding quadrupole error
+select, flag = error, class = quadrupole, pattern = R4;
+efcomp, order = 2, dkn = {0,0.0002};
+
+select, flag = error, clear = true;
+
+SELECT, FLAG=ERROR, CLASS=quadrupole, PATTERN = .;
+SELECT, FLAG=ERROR, CLASS=quadrupole, PATTERN = .;
+EFCOMP, ORDER=2, dks := {0,0.0000015*gauss()};
+ESAVE, FILE="errors.out";
+
+
+
+
+MATCH, SEQUENCE=lhcb1;
+VARY, NAME=dQx.b1, STEP=1.0E-5;
+VARY, NAME=dQy.b1, STEP=1.0E-5;
+CONSTRAINT, SEQUENCE=lhcb1, RANGE=#e, MUX=62.315, MUY=60.315;
+LMDIF, CALLS=100, TOLERANCE=0.0000001;
+endmatch;
+
+twiss, file = "output_files/twiss.C_min";
+stop;
+
+

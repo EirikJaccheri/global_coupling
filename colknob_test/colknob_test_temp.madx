@@ -1,4 +1,4 @@
-system,"ln -fns /afs/cern.ch/eng/lhc/optics/runII/2018 lhc";
+system,"ln -fns /home/eirik/CERN/lhc2018/2018 lhc";
 
 Option, -echo,-warn,-info;
 call,file="lhc/lhc_as-built.seq";
@@ -31,16 +31,16 @@ KQSX3.R5 = 1.0*(colknob5*1E-4);
 MATCH, SEQUENCE=lhcb1;
 VARY, NAME=dQx.b1, STEP=1.0E-5;
 VARY, NAME=dQy.b1, STEP=1.0E-5;
-CONSTRAINT, SEQUENCE=lhcb1, RANGE=#e, MUX=62.315, MUY=60.315;
+CONSTRAINT, SEQUENCE=lhcb1, RANGE=#e, MUX=62.310, MUY=60.320;
 LMDIF, CALLS=100, TOLERANCE=0.0000001;
 endmatch;
 
-
+select, flag = twiss,pattern = BPM;
 select, flag = twiss,pattern = MQSX.3R1;
 select, flag = twiss,pattern = MQSX.3L1;
 select, flag = twiss,pattern = MQSX.3R5;
 select, flag = twiss,pattern = MQSX.3L5;
-twiss,centre = true file="twiss.test";
+twiss,centre = true file="output_files/twiss.test";
 qx=table(summ,q1); qy=table(summ,q2);
 
 C_minus = abs(qx - qy - 2);
