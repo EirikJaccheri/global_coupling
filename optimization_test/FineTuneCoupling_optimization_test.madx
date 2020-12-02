@@ -1,0 +1,136 @@
+!fine tuning of coupling   (S.Fartoukh)
+
+system,"ln -fns %lhc_path lhc";
+
+Option, -echo,-warn,-info;
+call,file="lhc/lhc_as-built.seq";
+call,file="lhc/toolkit/macro.madx";
+call,file="lhc/PROTON/%opticsfile";
+!call,file="lhc/PROTON/opticsfile.1";
+
+Option, echo,warn,info;
+exec,mk_beam(6500);
+use, sequence=lhcb1;
+
+
+
+!%knob_Re_type    :=   %knob_Re_value;
+!%knob_Im_type    :=   %knob_Im_value;
+
+
+
+KQSX3.R1 = %colknob1*1E-4;
+KQSX3.L1 = -%colknob1*1E-4;
+
+KQSX3.R5 = %colknob5*1E-4;
+KQSX3.L5 = -%colknob5*1E-4;
+
+
+!adding quadrupole error
+select, flag = error, class = %quad_component, pattern = %quad_pattern_1;
+efcomp, order = 2, dkn = {0,%quad_strength};
+
+select, flag = error, clear = true;
+
+
+SELECT, FLAG=ERROR, CLASS=%error_component, PATTERN = %pattern_1;
+SELECT, FLAG=ERROR, CLASS=%error_component, PATTERN = %pattern_2;
+EFCOMP, ORDER=2, dks := {0,%error_strength};
+!ESAVE, FILE="errors.out";
+
+
+
+tsplit = 2;
+
+! closest tune
+ dQx.b10=dQx.b1;
+ dQy.b10=dQy.b1;
+ qmid=(qx0-qx00+qy0-qy00)*0.5;
+
+ match;
+ global, q1=62.305,q2=60.305;
+ vary,   name=dQx.b1, step=1.E-9;
+ vary,   name=dQy.b1, step=1.E-9;
+ lmdif,  calls=50, tolerance=1.E-5;
+ endmatch;
+
+
+! Quick minimization based on linear machine
+ CMRS0 = %knob_Re_type;
+ CMIS0 = %knob_Im_type;
+ twiss; qx=table(summ,q1); qy=table(summ,q2);
+
+ cta0     = abs(qx-qy-tsplit);
+ closest0 = cta0;
+ %knob_Re_type  = CMRS0+cta0/2.;
+ twiss; qx=table(summ,q1); qy=table(summ,q2);
+
+ ctap     = abs(qx-qy-tsplit);
+ %knob_Re_type  = CMRS0-cta0/2.;
+ twiss; qx=table(summ,q1); qy=table(summ,q2);
+
+ ctam     = abs(qx-qy-tsplit);
+ %knob_Re_type  = CMRS0+(ctam^2-ctap^2)/2./cta0;
+ twiss; qx=table(summ,q1); qy=table(summ,q2);
+
+ cta0     = abs(qx-qy-tsplit);
+ %knob_Im_type  = CMIS0+cta0/2.;
+ twiss; qx=table(summ,q1); qy=table(summ,q2);
+
+ ctap     = abs(qx-qy-tsplit);
+ %knob_Im_type  = CMIS0-cta0/2.;
+ twiss; qx=table(summ,q1); qy=table(summ,q2);
+
+ ctam     = abs(qx-qy-tsplit);
+ %knob_Im_type  = CMIS0+(ctam^2-ctap^2)/2./cta0;
+ twiss; qx=table(summ,q1); qy=table(summ,q2);
+
+ closest1 =abs(qx-qy-tsplit);
+
+
+!Empirical minimisation
+ match;
+ global, q1=62.305,q2=60.305;
+ vary,   name=dQx.b1, step=1.E-9;
+ vary,   name=dQy.b1, step=1.E-9;
+ lmdif,  calls=100,tolerance=1.E-6;
+ endmatch;
+
+ match;
+ global, q1=62.305,q2=60.305;
+ vary,   name=%knob_Re_type, step=1.E-9;
+ vary,   name=%knob_Im_type, step=1.E-9;
+ lmdif,  calls=150, tolerance=2.E-6;
+ endmatch;
+
+ match;
+ global, q1=62.305,q2=60.305;
+ vary,   name=dQx.b1, step=1.E-9;
+ vary,   name=dQy.b1, step=1.E-9;
+ lmdif,  calls=100, tolerance=1.E-7;
+ endmatch;
+
+ match;
+ global, q1=62.305,q2=60.305;
+ vary,   name=%knob_Re_type, step=1.E-9;
+ vary,   name=%knob_Im_type, step=1.E-9;
+ lmdif,  calls=150, tolerance=2.E-7;
+ endmatch;
+
+ match;
+ global, q1=62.305,q2=60.305;
+ vary,   name=dQx.b1, step=1.E-9;
+ vary,   name=dQy.b1, step=1.E-9;
+ lmdif,  calls=100, tolerance=1.E-7;
+ endmatch;
+
+ twiss;  qx=table(summ,q1); qy=table(summ,q2);
+ closest2=abs(qx-qy-tsplit);
+ value, closest0, closest1, closest2, %knob_Re_type, %knob_Im_type;
+
+ select, flag = save ,class = variable, PATTERN="%knob_Im_type$";
+ select, flag = save ,class = variable, pattern="%knob_Re_type$";
+ save, file ="output_files/knob.txt";
+ 
+
+return;

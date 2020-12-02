@@ -42,75 +42,18 @@ reset_response_dict_new = {"%error_component" : "quadrupole",
 }
 
 
+reset_analyticresponse_dict_new = {"%knob_Re_value" : "0.", 
+"%knob_Im_value" : "0.",
+"%error_strength":"0."
+}
+
 reset_beta_error_dict_new = {"%error_strength" : "0.", "%quad_strength" : "0."}
 
 
 set_reset_dict(reset_response_dict,reset_response_dict_new)
+set_reset_dict(reset_analyticresponse_dict,reset_analyticresponse_dict_new)
 set_reset_dict(reset_beta_error_dict,reset_beta_error_dict_new)
 
-
-
-def deltaPhi(mu_BPM,mu_error,Q):
-	condlist = np.array([mu_BPM >= mu_error, mu_BPM < mu_error])
-	choicelist = np.array([mu_BPM - mu_error, mu_BPM - mu_error + Q])
-	return np.select(condlist,choicelist)
-
-
-def B_matrix(mux_BPM,muy_BPM,Qx,Qy,betax_error,betay_error,mux_error,muy_error):
-	n_BPM = len(mux_BPM)
-	n_error = len(mux_error)
-
-	mux_error_grid, mux_BPM_grid = np.meshgrid(mux_error,mux_BPM)	
-	muy_error_grid, muy_BPM_grid,  = np.meshgrid(muy_error,muy_BPM)
-	
-	C =  1 / (4*(1 - np.exp(2*np.pi*1j*(Qx - Qy))))
-	B_1 = np.tensordot(np.ones(n_BPM),np.sqrt(betax_error*betay_error),axes = 0)
-	B_2 = np.exp(2*np.pi*1j*(deltaPhi(mux_BPM_grid,mux_error_grid,Qx) - deltaPhi(muy_BPM_grid,muy_error_grid,Qy)))
-	B = C * B_1 * B_2
-	B.real *= -1 #multiplying by -1 since there are different sign connventions in franchi and madx
-	return B
-
-
-def f_1001(mux_BPM,muy_BPM,Qx,Qy,betax_error,betay_error,mux_error,muy_error,KS):
-	B = B_matrix(mux_BPM,muy_BPM,Qx,Qy,betax_error,betay_error,mux_error,muy_error)
-	return np.dot(B,KS)
-
-	
-def get_knob_matrix(change_dict):
-	change_dict_local = copy.deepcopy(change_dict)
-	change_value(change_dict_local,"%twiss_pattern",".")
-	tw40cm = get_twiss(response_path,"twiss.original",change_dict_local)
-	name_l = tw40cm.NAME
-	
-
-	N_KQS = 12
-	knob_Re_name = change_dict_local["%knob_Re_type"]
-	knob_Im_name = change_dict_local["%knob_Im_type"]
-	
-	with open("lhc/lhc_as-built.seq",'r') as read_obj:
-		data_lhc = read_obj.readlines()
-	
-	
-	KQS_matrix = []
-	KQS_index_l = []
-	KQS_name_l = []
-	with open("knob_matrix.txt",'r') as read_obj:
-		for line1 in read_obj:
-			line1 = line1.replace('(','')
-			line1 = line1.replace(')','')
-			line1_l = line1.split(' ')
-			KQS = line1_l[0]
-			Knob_Re_index = line1_l.index(knob_Re_name) - 2
-			Knob_Im_index = line1_l.index(knob_Im_name) - 2
-			for line2 in data_lhc:
-				if line2.__contains__(KQS.lower()):
-					line2_l = line2.split(' ')
-					QS = line2_l[2]
-					QS = QS.replace(',','')
-					KQS_index_l.append(name_l.index(QS))
-					KQS_matrix.append([float(line1_l[Knob_Re_index]), float(line1_l[Knob_Im_index])])
-					KQS_name_l.append(QS)
-	return np.array(KQS_matrix), np.array(KQS_index_l),KQS_name_l,tw40cm
 
 
 
@@ -242,49 +185,6 @@ def plot_f1001_knob_comparison(change_dict,savepath):
 	plt.savefig("plots/"+savepath)
 	plt.show()
 	
-def get_analytic_responsematrix(change_dict,B_scaling = 1):
-	change_dict_local = copy.deepcopy(change_dict)
-	change_value(change_dict_local,"%knob_Re_value","0.") #should knobs be zero?
-	change_value(change_dict_local,"%knob_Im_value","0.")
-	change_value(change_dict_local,"%error_strength","0.")
-
-	KQS_matrix, KQS_index_l, KQS_name_l = get_knob_matrix(change_dict)[0:3]
-	
-	
-	change_value(change_dict_local,"%twiss_pattern","BPM")
-	tw40cm = get_twiss(response_path,"twiss.original",change_dict_local)
-	tw40cm.Cmatrix()
-	f1001_0 = np.array(tw40cm.F1001R) + 1j * np.array(tw40cm.F1001I)
-	betx_BPM = np.array(tw40cm.BETX)
-	bety_BPM = np.array(tw40cm.BETY)
-	mux_BPM = np.array(tw40cm.MUX)
-	muy_BPM = np.array(tw40cm.MUY)
-	
-	
-	change_value(change_dict_local,"%twiss_pattern",".")
-	tw40cm = get_twiss(response_path,"twiss.original",change_dict_local)
-	name_l = tw40cm.NAME
-	betx = np.array(tw40cm.BETX)
-	bety = np.array(tw40cm.BETY)
-	mux = np.array(tw40cm.MUX)
-	muy = np.array(tw40cm.MUY)
-	Qx = tw40cm.Q1
-	Qy = tw40cm.Q2
-	
-
-	betx_error = np.take(betx,KQS_index_l)
- 	bety_error = np.take(bety,KQS_index_l)
-	mux_error = np.take(mux,KQS_index_l)
-	muy_error = np.take(muy,KQS_index_l)
-	
-	l = 0.32
-	B = B_scaling * B_matrix(mux_BPM,muy_BPM,Qx,Qy,betx_error,bety_error,mux_error,muy_error)
-	Z = np.dot(B,KQS_matrix) * l
-	R = np.block([[np.real(Z)],[np.imag(Z)]])
-	R_inverse = np.linalg.pinv(R)
-	return R_inverse
-	
-	
 
 def plot_response_matrix_comparison(change_dict,savepath):
 	change_dict_local = copy.deepcopy(change_dict)
@@ -320,14 +220,18 @@ def plot_response_matrix_comparison(change_dict,savepath):
 	ax1.plot(S,abs(f_0),label = "f_0")
 	ax1.plot(S,abs(f_analytic_res),label = "f_analytic_res")
 	ax1.plot(S,abs(f_res),label = "f_res")
+	ax1.set_xlabel("S")
+	ax1.set_ylabel("|f1001|")
 	ax1.legend()
 	
 	fig.tight_layout(rect=[0, 0.03, 1, 0.9])
 	plt.savefig('plots/' + savepath)
 	plt.show()
 	
-	plt.plot(S,beta_beatx)
-	plt.plot(S,beta_beaty)
+	plt.plot(S,np.real(f_analytic_res))
+	plt.plot(S,np.real(f_res))
+	plt.plot(S,np.imag(f_analytic_res))
+	plt.plot(S,np.imag(f_res))
 	plt.show()
 	
 
@@ -445,79 +349,15 @@ def tune_scaling_correction(change_dict,Qx_matrix,Qy_matrix,Qx_correction,Qy_cor
 	plt.savefig("plots/" + savepath)
 	plt.show()
 
-def get_R_complex(change_dict,B_scaling = 1):
-	change_dict_local = copy.deepcopy(change_dict)
-	change_value(change_dict_local,"%knob_Re_value","0.") #should knobs be zero?
-	change_value(change_dict_local,"%knob_Im_value","0.")
-	change_value(change_dict_local,"%error_strength","0.")
-
-	KQS_matrix, KQS_index_l, KQS_name_l = get_knob_matrix(change_dict)[0:3]
-	
-	
-	change_value(change_dict_local,"%twiss_pattern","BPM")
-	tw40cm = get_twiss(response_path,"twiss.original",change_dict_local)
-	tw40cm.Cmatrix()
-	f1001_0 = np.array(tw40cm.F1001R) + 1j * np.array(tw40cm.F1001I)
-	betx_BPM = np.array(tw40cm.BETX)
-	bety_BPM = np.array(tw40cm.BETY)
-	mux_BPM = np.array(tw40cm.MUX)
-	muy_BPM = np.array(tw40cm.MUY)
-	
-	
-	change_value(change_dict_local,"%twiss_pattern",".")
-	tw40cm = get_twiss(response_path,"twiss.original",change_dict_local)
-	name_l = tw40cm.NAME
-	betx = np.array(tw40cm.BETX)
-	bety = np.array(tw40cm.BETY)
-	mux = np.array(tw40cm.MUX)
-	muy = np.array(tw40cm.MUY)
-	Qx = tw40cm.Q1
-	Qy = tw40cm.Q2
-	
-
-	betx_error = np.take(betx,KQS_index_l)
- 	bety_error = np.take(bety,KQS_index_l)
-	mux_error = np.take(mux,KQS_index_l)
-	muy_error = np.take(muy,KQS_index_l)
-	
-	l = 0.32
-	B = B_scaling * B_matrix(mux_BPM,muy_BPM,Qx,Qy,betx_error,bety_error,mux_error,muy_error)
-	Z = np.dot(B,KQS_matrix) * l
-	return np.real(Z), np.imag(Z)
-	
-def test_absolute_response(change_dict,savepath):
-	change_dict_local = copy.deepcopy(change_dict)
-	S , f_0 = get_S_f(response_path,"twiss.original",change_dict_local)
-	
-	R_Re , R_Im = get_R_complex(change_dict_local)
-	R = ((np.real(f_0) / abs(f_0)) * R_Re.T).T + ((np.imag(f_0) / abs(f_0)) * R_Im.T).T
-	R_inverse_abs = np.linalg.pinv(R)
-	knobs = - np.dot(R_inverse_abs,abs(f_0))
-	knob_Re_abs, knob_Im_abs = knobs[0] , knobs[1]
-	set_knobs(change_dict_local,knob_Re_abs,knob_Im_abs)
-	f_res_abs = get_f(response_path,"twiss.original",change_dict_local)
-	
-	set_knobs(change_dict_local,0.,0.)
-	R = np.block([[R_Re],[R_Im]])
-	R_inverse = np.linalg.pinv(R)
-	knob_Re_res , knob_Im_res = get_response_knobs(R_inverse,change_dict_local)
-	set_knobs(change_dict_local,knob_Re_res,knob_Im_res)
-	f_res = get_f(response_path,"twiss.original",change_dict_local)
-	
-	fig = plt.figure()
-	ax1 = fig.add_subplot(1,1,1)
-	ax1.plot(S,abs(f_0),label = "f_0")
-	ax1.plot(S,abs(f_res_abs),label = "f_res_abs")
-	ax1.plot(S,abs(f_res),label = "f_res")
-	ax1.legend()
-	plt.show()
-	
 def test(change_dict,savepath):
 	change_dict_local = copy.deepcopy(change_dict)
 	S, f_0 = get_S_f(response_path,"twiss.original",change_dict_local)
 	C_min_0 = get_C_min(change_dict_local)
 	
-	R_inverse = get_analytic_responsematrix(change_dict_local)
+	
+	change_value(change_dict_local,"%quad_strength","0.")
+	R_inverse =  get_analytic_responsematrix(change_dict_local)
+	change_value(change_dict_local,"%quad_strength",change_dict["%quad_strength"])
 	knob_Re,knob_Im = get_response_knobs(R_inverse,change_dict_local)
 	R = np.linalg.pinv(R_inverse)
 	knobs = np.array([knob_Re,knob_Im])
@@ -552,13 +392,10 @@ def test(change_dict,savepath):
 	plt.savefig("plots/" + savepath)
 	plt.show()
 	
+
 	
 	
-	
-R = np.array([[1,2],[3,4]])
-v = np.array([1,0])
-print(R)
-print((v * R.T).T)
+
 change_dict = {}
 change_dict["%lhc_path"] = lhc_path
 #change_dict["%opticsfile"] = "opticsfile.19"
@@ -647,6 +484,7 @@ change_value(change_dict_local,"%quad_strength","0.")
 change_value(change_dict_local,"%quad_pattern_1","R3")
 change_value(change_dict_local,"%quad_pattern_2","R3")
 #plot_response_matrix_comparison(change_dict_local,"response_matrix_comparison_R3_zeroQ.pdf")
+change_value(change_dict_local,"%error_strength","0.00003*gauss()")
 change_value(change_dict_local,"%quad_pattern_1","R5")
 change_value(change_dict_local,"%quad_pattern_2","R5")
 #plot_response_matrix_comparison(change_dict_local,"response_matrix_comparison_R5_zeroQ.pdf")
@@ -686,17 +524,15 @@ change_value(change_dict_local,"%knob_Im_value","0.")
 
 Qx_matrix , Qy_matrix = 62.30 , 60.33
 Qx_correction , Qy_correction = 62.31 , 60.32
-tune_scaling_correction(change_dict,Qx_matrix,Qy_matrix,Qx_correction,Qy_correction,"Rescaling_correction_matrix03_correction01.pdf")
+#tune_scaling_correction(change_dict_local,Qx_matrix,Qy_matrix,Qx_correction,Qy_correction,"Rescaling_correction_matrix03_correction01.pdf")
 
 Qx_matrix , Qy_matrix = 62.29 , 60.34
 Qx_correction , Qy_correction = 62.31 , 60.32
-tune_scaling_correction(change_dict,Qx_matrix,Qy_matrix,Qx_correction,Qy_correction,"Rescaling_correction_matrix05_correction01.pdf")
+#tune_scaling_correction(change_dict_local,Qx_matrix,Qy_matrix,Qx_correction,Qy_correction,"Rescaling_correction_matrix05_correction01.pdf")
 
 change_value(change_dict_local,"%quad_strength","0.")
-change_value(change_dict_local,"%error_strength","0.00001*gauss()")
+change_value(change_dict_local,"%error_strength","0.000018*gauss()")
 Qx_matrix , Qy_matrix = 62.3125 , 60.3175
 Qx_correction , Qy_correction = 62.31 , 60.32
-#tune_scaling_correction(change_dict,Qx_matrix,Qy_matrix,Qx_correction,Qy_correction,"Rescaling_correction_matrix07_correction01_zeroQ.pdf")
-
-
+#tune_scaling_correction(change_dict_local,Qx_matrix,Qy_matrix,Qx_correction,Qy_correction,"Rescaling_correction_matrix005_correction01_zeroQ.pdf")
 

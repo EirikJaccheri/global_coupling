@@ -21,6 +21,7 @@ C_min_path = "no C_min_path"
 FineTuneCoupling_path = "no FineTuneCoupling_path"
 
 reset_response_dict = {"unchanged_key" : "unchanged_value"}
+reset_analyticresponse_dict = {"unchanged_key" : "unchanged_value"}
 reset_beta_error_dict = {"unchanged_key" : "unchanged_value"}
 
 
@@ -215,10 +216,128 @@ def get_mean_strength(change_dict):
 
 def set_knobs(change_dict,knob_Re,knob_Im):
 	change_value(change_dict,"%knob_Re_value",str(knob_Re))
-	change_value(change_dict,"%knob_Im_value",str(knob_Im))		
+	change_value(change_dict,"%knob_Im_value",str(knob_Im))
+	
+	
+#analytical responsematrix code	
 
 
 
+def deltaPhi(mu_BPM,mu_error,Q):
+	condlist = np.array([mu_BPM >= mu_error, mu_BPM < mu_error])
+	choicelist = np.array([mu_BPM - mu_error, mu_BPM - mu_error + Q])
+	return np.select(condlist,choicelist)
 
+def B_components(mux_BPM,muy_BPM,Qx,Qy,betax_error,betay_error,mux_error,muy_error):
+	n_BPM = len(mux_BPM)
+	n_error = len(mux_error)
+
+	mux_error_grid, mux_BPM_grid = np.meshgrid(mux_error,mux_BPM)	
+	muy_error_grid, muy_BPM_grid,  = np.meshgrid(muy_error,muy_BPM)
+	
+	C =  1 / (4*(1 - np.exp(2*np.pi*1j*(Qx - Qy))))
+	B_1 = np.tensordot(np.ones(n_BPM),np.sqrt(betax_error*betay_error),axes = 0)
+	B_2 = np.exp(2*np.pi*1j*(deltaPhi(mux_BPM_grid,mux_error_grid,Qx) - deltaPhi(muy_BPM_grid,muy_error_grid,Qy)))
+	return C , B_1, B_2
+def B_matrix(mux_BPM,muy_BPM,Qx,Qy,betax_error,betay_error,mux_error,muy_error):
+	C , B_1, B_2 = B_components(mux_BPM,muy_BPM,Qx,Qy,betax_error,betay_error,mux_error,muy_error)
+	B = C * B_1 * B_2
+	B.real *= -1 #multiplying by -1 since there are different sign connventions in franchi and madx
+	return B
+
+
+def f_1001(mux_BPM,muy_BPM,Qx,Qy,betax_error,betay_error,mux_error,muy_error,KS):
+	B = B_matrix(mux_BPM,muy_BPM,Qx,Qy,betax_error,betay_error,mux_error,muy_error)
+	return np.dot(B,KS)
+
+	
+def get_knob_matrix(change_dict):
+	change_dict_local = copy.deepcopy(change_dict)
+	change_value(change_dict_local,"%twiss_pattern",".")
+	tw40cm = get_twiss(response_path,"twiss.original",change_dict_local)
+	name_l = tw40cm.NAME
+	
+
+	N_KQS = 12
+	knob_Re_name = change_dict_local["%knob_Re_type"]
+	knob_Im_name = change_dict_local["%knob_Im_type"]
+	
+	with open("/home/eirik/CERN/global_coupling_correction/analytical_test/lhc/lhc_as-built.seq",'r') as read_obj:
+		data_lhc = read_obj.readlines()
+	
+	
+	KQS_matrix = []
+	KQS_index_l = []
+	KQS_name_l = []
+	with open("/home/eirik/CERN/global_coupling_correction/global_coupling/knob_matrix.txt",'r') as read_obj:
+		for line1 in read_obj:
+			line1 = line1.replace('(','')
+			line1 = line1.replace(')','')
+			line1_l = line1.split(' ')
+			KQS = line1_l[0]
+			Knob_Re_index = line1_l.index(knob_Re_name) - 2
+			Knob_Im_index = line1_l.index(knob_Im_name) - 2
+			for line2 in data_lhc:
+				if line2.__contains__(KQS.lower()):
+					line2_l = line2.split(' ')
+					QS = line2_l[2]
+					QS = QS.replace(',','')
+					KQS_index_l.append(name_l.index(QS))
+					KQS_matrix.append([float(line1_l[Knob_Re_index]), float(line1_l[Knob_Im_index])])
+					KQS_name_l.append(QS)
+	return np.array(KQS_matrix), np.array(KQS_index_l),KQS_name_l,tw40cm
+
+	
+def get_responsematrix_components(change_dict,B_scaling = 1):
+	change_dict_local = copy.deepcopy(change_dict)
+	
+	assert "unchanged_key" not in reset_analyticresponse_dict, "you havent set the reset_analyticresponse_dict"
+	set_changes(change_dict_local,reset_analyticresponse_dict)
+	
+
+	KQS_matrix, KQS_index_l, KQS_name_l, tw40cm = get_knob_matrix(change_dict)[0:4]
+	
+	
+	change_value(change_dict_local,"%twiss_pattern","BPM")
+	tw40cm = get_twiss(response_path,"twiss.original",change_dict_local)
+	tw40cm.Cmatrix()
+	f1001_0 = np.array(tw40cm.F1001R) + 1j * np.array(tw40cm.F1001I)
+	betx_BPM = np.array(tw40cm.BETX)
+	bety_BPM = np.array(tw40cm.BETY)
+	mux_BPM = np.array(tw40cm.MUX)
+	muy_BPM = np.array(tw40cm.MUY)
+	
+	
+	change_value(change_dict_local,"%twiss_pattern",".")
+	tw40cm = get_twiss(response_path,"twiss.original",change_dict_local)
+	name_l = tw40cm.NAME
+	betx = np.array(tw40cm.BETX)
+	bety = np.array(tw40cm.BETY)
+	mux = np.array(tw40cm.MUX)
+	muy = np.array(tw40cm.MUY)
+	Qx = tw40cm.Q1
+	Qy = tw40cm.Q2
+	
+
+	betx_error = np.take(betx,KQS_index_l)
+ 	bety_error = np.take(bety,KQS_index_l)
+	mux_error = np.take(mux,KQS_index_l)
+	muy_error = np.take(muy,KQS_index_l)
+	
+	l = 0.32
+	C , B_1 , B_2 = B_components(mux_BPM,muy_BPM,Qx,Qy,betx_error,bety_error,mux_error,muy_error)
+	B = B_scaling * B_matrix(mux_BPM,muy_BPM,Qx,Qy,betx_error,bety_error,mux_error,muy_error)
+	Z = np.dot(B,KQS_matrix) * l
+	Z = np.dot(B,KQS_matrix) * l
+	return np.real(Z), np.imag(Z), B , C , B_1 , B_2 , KQS_matrix , KQS_index_l , KQS_name_l , tw40cm
+
+
+def get_analytic_responsematrix(change_dict,B_scaling = 1):
+	Z_Re, Z_Im = get_responsematrix_components(change_dict,B_scaling)[0:2]
+	
+	R = np.block([[Z_Re],[Z_Im]])
+	R_inverse = np.linalg.pinv(R)
+	return R_inverse
+	
 
 
