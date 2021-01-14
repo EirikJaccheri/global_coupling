@@ -11,8 +11,8 @@ exec,mk_beam(6500);
 use, sequence=lhcb1;
 
 
-CMRS.b1_sq    :=   0.;
-CMIS.b1_sq    :=   0.;
+CMRS.b1_sq    :=   0.002;
+CMIS.b1_sq    :=   0.003;
 
 
 KQSX3.R1 = 0.*1E-4;
@@ -24,13 +24,13 @@ KQSX3.L5 = -0.*1E-4;
 
 !adding quadrupole error
 select, flag = error, class = quadrupole, pattern = R5;
-efcomp, order = 2, dkn = {0,0.};
+efcomp, order = 2, dkn = {0,0.00018};
 
 select, flag = error, clear = true;
 
 SELECT, FLAG=ERROR, CLASS=quadrupole, PATTERN = .;
 SELECT, FLAG=ERROR, CLASS=quadrupole, PATTERN = .;
-EFCOMP, ORDER=2, dks := {0,0.00003*gauss()};
+EFCOMP, ORDER=2, dks := {0,0.};
 ESAVE, FILE="errors.out";
 
 

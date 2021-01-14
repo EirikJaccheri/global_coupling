@@ -1,0 +1,7 @@
+\begin{tabular}{lrrrrr}
+\toprule
+{} &  Matching &   Cmatrix &   CombRDT &    TobRog &  Franchi \\
+\midrule
+1 &  0.005613 &  0.005613 &  0.005823 &  0.006366 &  0.00643 \\
+\bottomrule
+\end{tabular}
